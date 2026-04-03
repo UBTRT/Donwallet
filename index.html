@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>DON-WALLET | Crypto Trading Dashboard</title>
+    <!-- Font Awesome 6 (free icons) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Google Fonts: Inter modern sans -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: #0a0c12;
+            color: #eef2ff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1.5rem;
+        }
+
+        /* main app container */
+        .app-container {
+            max-width: 560px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        /* cards & glassmorphism */
+        .card {
+            background: rgba(18, 22, 35, 0.9);
+            backdrop-filter: blur(2px);
+            border-radius: 2rem;
+            padding: 1.6rem;
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.5);
+            border: 1px solid rgba(66, 99, 235, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #2b3b8c, #1a2a6c);
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 0.8rem 1.2rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: 0.2s;
+            width: 100%;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b4fca, #1f3490);
+            box-shadow: 0 4px 12px rgba(59,79,202,0.3);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #4a60e0, #2a3fa8);
+            transform: scale(0.98);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #3b4fca;
+            color: #b9c8ff;
+        }
+
+        .input-group {
+            margin-bottom: 1.2rem;
+            position: relative;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-bottom: 0.3rem;
+            color: #9ca3cf;
+        }
+
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            background: #10131f;
+            border: 1px solid #2a2f45;
+            border-radius: 1.2rem;
+            color: white;
+            font-size: 0.9rem;
+            outline: none;
+            transition: 0.2s;
+        }
+
+        .input-group input:focus, .input-group select:focus {
+            border-color: #4f6af5;
+            box-shadow: 0 0 0 2px rgba(79,106,245,0.3);
+        }
+
+        .password-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .password-wrapper input {
+            padding-right: 2.8rem;
+        }
+
+        .toggle-eye {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            color: #9aa4d4;
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 0 5px;
+        }
+
+        .error-msg {
+            color: #ff7b72;
+            font-size: 0.7rem;
+            margin-top: 5px;
+            display: block;
+        }
+
+        .success-msg {
+            color: #6fefb0;
+        }
+
+        .flex-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+        }
+
+        .dashboard-stats {
+            background: #0f1222;
+            border-radius: 1.5rem;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .live-price {
+            background: #0b0e1a;
+            border-radius: 1.2rem;
+            padding: 1rem;
+        }
+
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin: 0.8rem 0;
+        }
+
+        .positive {
+            color: #34d399;
+        }
+
+        .negative {
+            color: #f87171;
+        }
+
+        .stat-box {
+            background: #13182a;
+            border-radius: 1rem;
+            padding: 0.8rem;
+            text-align: center;
+            flex: 1;
+        }
+
+        .link-copy {
+            background: #1e253f;
+            padding: 0.6rem;
+            border-radius: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            word-break: break-all;
+        }
+
+        button.small-icon {
+            background: #2d3a6e;
+            border: none;
+            color: white;
+            border-radius: 2rem;
+            padding: 0.3rem 0.8rem;
+            cursor: pointer;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin: 1.5rem 0 1rem;
+        }
+
+        .footer-wa {
+            text-align: center;
+            margin-top: 1.8rem;
+            font-size: 0.8rem;
+        }
+
+        .footer-wa a {
+            color: #25D366;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #FFFFFF, #b4c8ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        hr {
+            border-color: #2a2f45;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+<div class="app-container" id="appRoot">
+    <!-- AUTH WRAPPER: login & register forms (dynamic) -->
+    <div id="authContainer">
+        <!-- Login Card -->
+        <div id="loginCard" class="card">
+            <div class="logo" style="margin-bottom: 1rem;">💰 DON-WALLET</div>
+            <h2>Welcome back</h2>
+            <p style="margin-bottom: 1.5rem; font-size: 0.85rem;">Sign in to your account</p>
+            <form id="loginForm">
+                <div class="input-group">
+                    <label><i class="fas fa-user"></i> Username</label>
+                    <input type="text" id="loginUsername" placeholder="e.g., ASSAX" autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <label><i class="fas fa-lock"></i> Password</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="loginPassword" placeholder="••••••••">
+                        <button type="button" class="toggle-eye" data-target="loginPassword"><i class="far fa-eye-slash"></i></button>
+                    </div>
+                </div>
+                <div id="loginError" class="error-msg" style="margin-bottom: 1rem;"></div>
+                <button type="submit" class="btn btn-primary">Login →</button>
+            </form>
+            <div style="text-align: center; margin-top: 1.2rem;">
+                <span style="font-size: 0.8rem;">Don't have an account? </span>
+                <button id="showRegisterBtn" style="background:none; border:none; color:#6c8eff; cursor:pointer; font-weight:600;">Register</button>
+            </div>
+            <div style="margin-top: 1rem; font-size: 0.7rem; text-align: center; color:#7e87b0;">
+                Demo: username <strong>ASSAX</strong> / password <strong>12345678</strong>
+            </div>
+        </div>
+
+        <!-- Register Card (hidden initially) -->
+        <div id="registerCard" class="card hidden">
+            <div class="logo" style="margin-bottom: 0.5rem;">📝 DON-WALLET</div>
+            <h2>Create account</h2>
+            <p style="margin-bottom: 1rem; font-size: 0.8rem;">Start your crypto journey</p>
+            <form id="registerForm">
+                <div class="input-group">
+                    <label>Username</label>
+                    <input type="text" id="regUsername" placeholder="choose username" autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <label>Country</label>
+                    <select id="regCountry">
+                        <option value="Uganda">Uganda</option>
+                        <option value="Kenya">Kenya</option>
+                        <option value="Burundi">Burundi</option>
+                        <option value="Tanzania">Tanzania</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Phone number (starting with 07, 10 digits)</label>
+                    <input type="tel" id="regPhone" placeholder="07xxxxxxxx" maxlength="10">
+                </div>
+                <div class="input-group">
+                    <label>Password (min 4 characters)</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="regPassword" placeholder="••••">
+                        <button type="button" class="toggle-eye" data-target="regPassword"><i class="far fa-eye-slash"></i></button>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Confirm Password</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="regConfirmPassword" placeholder="confirm">
+                        <button type="button" class="toggle-eye" data-target="regConfirmPassword"><i class="far fa-eye-slash"></i></button>
+                    </div>
+                </div>
+                <div id="regError" class="error-msg"></div>
+                <button type="submit" class="btn btn-primary">Register & Login</button>
+            </form>
+            <div style="text-align: center; margin-top: 1rem;">
+                <button id="backToLoginBtn" style="background:none; border:none; color:#6c8eff; cursor:pointer;">← Back to Login</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DASHBOARD (main trading view) hidden until logged in -->
+    <div id="dashboardContainer" class="hidden">
+        <div class="card">
+            <div class="flex-row" style="justify-content: space-between;">
+                <div class="logo">💎 DON-WALLET</div>
+                <button id="logoutBtn" class="small-icon" style="background:#2c2f48;"><i class="fas fa-sign-out-alt"></i> Exit</button>
+            </div>
+            <div class="live-price" style="margin: 1rem 0;">
+                <div style="font-weight:600; margin-bottom: 0.5rem;">📈 LIVE TRADING</div>
+                <div class="price-row">
+                    <span><i class="fab fa-bitcoin"></i> BTC/USDT</span>
+                    <span><strong id="btcPrice">$43,272.91</strong> <span id="btcChange" class="negative">▼ 2.49%</span></span>
+                </div>
+                <div class="price-row">
+                    <span><i class="fab fa-ethereum"></i> ETH/USDT</span>
+                    <span><strong id="ethPrice">$2,963.54</strong> <span id="ethChange" class="positive">▲ 1.79%</span></span>
+                </div>
+                <div style="margin-top: 10px; font-size:0.85rem;">Profit Today: <strong id="profitToday">$10.61</strong></div>
+            </div>
+
+            <!-- Earnings / Stats Section -->
+            <div class="dashboard-stats">
+                <div style="font-size:1.2rem; font-weight:700;">Available Earnings</div>
+                <div style="font-size:2rem; font-weight:800;" id="availableEarnings">350,060 UGX</div>
+                <div class="flex-row" style="margin-top: 1rem;">
+                    <div class="stat-box"><div>Deposits</div><strong id="depositsAmount">950,000 UGX</strong></div>
+                    <div class="stat-box"><div>Earnings</div><strong id="earningsAmount">350,060 UGX</strong></div>
+                    <div class="stat-box"><div>Withdraws</div><strong id="withdrawsAmount">158,400 UGX</strong></div>
+                </div>
+            </div>
+
+            <!-- Referral link copy section -->
+            <div class="link-copy">
+                <span style="overflow:hidden; text-overflow:ellipsis;" id="refLink">https://donwallet.page/?ref=Jacob1</span>
+                <button id="copyRefBtn" class="small-icon"><i class="far fa-copy"></i> Copy</button>
+            </div>
+
+            <!-- Action Buttons: Add cash, Cashout, re-invest -->
+            <div class="action-buttons">
+                <button id="addCashBtn" class="btn" style="background:#2a3f6e;"><i class="fas fa-plus-circle"></i> Add cash</button>
+                <button id="cashoutBtn" class="btn" style="background:#5f3b6e;"><i class="fas fa-money-bill-wave"></i> Cashout</button>
+                <button id="reinvestBtn" class="btn" style="background:#2d6a4f;"><i class="fas fa-chart-line"></i> re-invest</button>
+            </div>
+            <div id="actionMessage" class="success-msg" style="text-align:center; font-size:0.8rem; margin-top:0.5rem;"></div>
+            <hr>
+            <div class="footer-wa">
+                <i class="fab fa-whatsapp"></i> <a href="#" id="whatsappGroupLink">Join WhatsApp Group</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ------------------- STORAGE & DEMO ACCOUNT -------------------
+    // User storage key: 'donwallet_users'
+    // Demo user: username "ASSAX", password "12345678"
+    // For demo we will pre-initialize if not exists, but also preserve any newly registered users.
+    // Remove all original data from reference image: we build fresh but maintain demo account.
+    
+    const STORAGE_KEY = 'donwallet_users';
+    const SESSION_KEY = 'donwallet_current_user';
+
+    // Default demo account (same as specification)
+    const DEMO_USER = {
+        username: "ASSAX",
+        password: "12345678",
+        country: "Uganda",
+        phone: "0712345678",   // demo valid 10-digit starting with 07
+        walletData: {
+            availableEarnings: 350060,   // UGX
+            deposits: 950000,
+            earnings: 350060,
+            withdraws: 158400
+        }
+    };
+
+    // Helper: load users from localStorage
+    function loadUsers() {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            return JSON.parse(stored);
+        } else {
+            // initialize with demo account only, all fresh data
+            const usersMap = {};
+            usersMap[DEMO_USER.username] = { ...DEMO_USER };
+            return usersMap;
+        }
+    }
+
+    function saveUsers(usersMap) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(usersMap));
+    }
+
+    // ensure demo always present (in case somehow deleted)
+    function ensureDemoUser() {
+        let users = loadUsers();
+        if (!users[DEMO_USER.username]) {
+            users[DEMO_USER.username] = { ...DEMO_USER };
+            saveUsers(users);
+        } else {
+            // ensure wallet data structure if missing
+            const existing = users[DEMO_USER.username];
+            if (!existing.walletData) {
+                existing.walletData = { ...DEMO_USER.walletData };
+                saveUsers(users);
+            }
+        }
+    }
+
+    // Get current logged in user data
+    function getCurrentUser() {
+        const username = sessionStorage.getItem(SESSION_KEY);
+        if (!username) return null;
+        const users = loadUsers();
+        return users[username] || null;
+    }
+
+    function updateUserInStorage(username, updatedData) {
+        const users = loadUsers();
+        if (users[username]) {
+            users[username] = { ...users[username], ...updatedData };
+            saveUsers(users);
+        }
+    }
+
+    // update wallet for logged user
+    function updateWallet(newWalletData) {
+        const curr = getCurrentUser();
+        if (curr) {
+            const updatedWallet = { ...curr.walletData, ...newWalletData };
+            updateUserInStorage(curr.username, { walletData: updatedWallet });
+            renderDashboard(); // refresh UI
+        }
+    }
+
+    // format UGX number
+    function formatUGX(amount) {
+        return amount.toLocaleString() + ' UGX';
+    }
+
+    // render dashboard with current user data
+    function renderDashboard() {
+        const user = getCurrentUser();
+        if (!user) return;
+        const wallet = user.walletData || { deposits: 950000, earnings: 350060, withdraws: 158400, availableEarnings: 350060 };
+        // recompute available = deposits + earnings - withdraws? but design uses static numbers. We follow original values from screenshot
+        // to be consistent: we store availableEarnings as field, but also can compute from earnings - withdraws? The screenshot had 350,060 UGX.
+        // Let's use the stored value or compute logical.
+        let available = wallet.availableEarnings;
+        if (available === undefined) {
+            available = (wallet.earnings || 0) - (wallet.withdraws || 0);
+        }
+        document.getElementById('availableEarnings').innerText = formatUGX(available);
+        document.getElementById('depositsAmount').innerText = formatUGX(wallet.deposits || 0);
+        document.getElementById('earningsAmount').innerText = formatUGX(wallet.earnings || 0);
+        document.getElementById('withdrawsAmount').innerText = formatUGX(wallet.withdraws || 0);
+        // ref link dynamic (based on username)
+        const refUrl = `https://don-wallet.com/?ref=${user.username}`;
+        document.getElementById('refLink').innerText = refUrl;
+    }
+
+    // simple live price simulation (keep numbers as per screenshot but they can be static)
+    function initPrices() {
+        // just keep the static values from design but we can optionally update later, fine.
+        // For fun, no auto update needed.
+    }
+
+    // copy ref link
+    function setupCopy() {
+        const copyBtn = document.getElementById('copyRefBtn');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', () => {
+                const linkSpan = document.getElementById('refLink');
+                const text = linkSpan.innerText;
+                navigator.clipboard.writeText(text).then(() => {
+                    const msg = document.getElementById('actionMessage');
+                    msg.innerText = '✅ Referral link copied!';
+                    setTimeout(() => { if(msg) msg.innerText = ''; }, 2000);
+                }).catch(() => alert('manual copy: ' + text));
+            });
+        }
+    }
+
+    // dashboard action handlers
+    function setupDashboardActions() {
+        const addBtn = document.getElementById('addCashBtn');
+        const cashoutBtn = document.getElementById('cashoutBtn');
+        const reinvestBtn = document.getElementById('reinvestBtn');
+        const msgDiv = document.getElementById('actionMessage');
+        
+        addBtn.addEventListener('click', () => {
+            const user = getCurrentUser();
+            if(user) {
+                let wallet = user.walletData || { deposits: 950000, earnings: 350060, withdraws: 158400, availableEarnings: 350060 };
+                let newDeposit = (wallet.deposits || 0) + 50000;
+                let newAvailable = (wallet.availableEarnings || 0) + 50000;
+                updateWallet({ deposits: newDeposit, availableEarnings: newAvailable });
+                msgDiv.innerText = '✅ +50,000 UGX added successfully!';
+                setTimeout(() => msgDiv.innerText = '', 2000);
+            }
+        });
+        cashoutBtn.addEventListener('click', () => {
+            const user = getCurrentUser();
+            if(user) {
+                let wallet = user.walletData || {};
+                let available = wallet.availableEarnings || 0;
+                if (available >= 10000) {
+                    let newWithdraw = (wallet.withdraws || 0) + 10000;
+                    let newAvailable = available - 10000;
+                    updateWallet({ withdraws: newWithdraw, availableEarnings: newAvailable });
+                    msgDiv.innerText = '💰 Cashed out 10,000 UGX!';
+                } else {
+                    msgDiv.innerText = '❌ Insufficient earnings to cashout min 10,000 UGX.';
+                }
+                setTimeout(() => msgDiv.innerText = '', 2500);
+            }
+        });
+        reinvestBtn.addEventListener('click', () => {
+            const user = getCurrentUser();
+            if(user) {
+                let wallet = user.walletData || {};
+                let available = wallet.availableEarnings || 0;
+                if (available >= 20000) {
+                    let newEarnings = (wallet.earnings || 0) + 20000;
+                    let newAvailable = available - 20000;
+                    updateWallet({ earnings: newEarnings, availableEarnings: newAvailable });
+                    msgDiv.innerText = '📈 Reinvested 20,000 UGX, earnings increased!';
+                } else {
+                    msgDiv.innerText = '⚠️ Need at least 20,000 UGX to reinvest.';
+                }
+                setTimeout(() => msgDiv.innerText = '', 2000);
+            }
+        });
+    }
+
+    // toggle password visibility
+    function attachPasswordToggles() {
+        const toggles = document.querySelectorAll('.toggle-eye');
+        toggles.forEach(btn => {
+            btn.removeEventListener('click', toggleHandler);
+            btn.addEventListener('click', toggleHandler);
+        });
+    }
+
+    function toggleHandler(e) {
+        const btn = e.currentTarget;
+        const targetId = btn.getAttribute('data-target');
+        const input = document.getElementById(targetId);
+        if (input) {
+            const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+            input.setAttribute('type', type);
+            const icon = btn.querySelector('i');
+            if (icon) {
+                if (type === 'text') {
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                } else {
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                }
+            }
+        }
+    }
+
+    // Registration validation
+    function registerUser(username, country, phone, password, confirm) {
+        // validations
+        if (!username || username.trim().length < 3) return "Username must be at least 3 characters.";
+        if (!country) return "Select country.";
+        const phoneRegex = /^07\d{8}$/;
+        if (!phoneRegex.test(phone)) return "Phone must start with 07 and exactly 10 digits (07xxxxxxxx).";
+        if (password.length < 4) return "Password minimum 4 characters.";
+        if (password !== confirm) return "Passwords do not match.";
+        const users = loadUsers();
+        if (users[username]) return "Username already exists. Choose another.";
+        // create new user with default wallet data (fresh)
+        const newWallet = {
+            deposits: 0,
+            earnings: 0,
+            withdraws: 0,
+            availableEarnings: 0
+        };
+        const newUser = {
+            username: username,
+            password: password,
+            country: country,
+            phone: phone,
+            walletData: newWallet
+        };
+        users[username] = newUser;
+        saveUsers(users);
+        return { success: true };
+    }
+
+    // login logic
+    function loginUser(username, password) {
+        const users = loadUsers();
+        const user = users[username];
+        if (!user) return "User not found.";
+        if (user.password !== password) return "Invalid password.";
+        sessionStorage.setItem(SESSION_KEY, username);
+        return { success: true };
+    }
+
+    // switch UI to dashboard
+    function showDashboard() {
+        document.getElementById('authContainer').classList.add('hidden');
+        document.getElementById('dashboardContainer').classList.remove('hidden');
+        renderDashboard();
+        setupDashboardActions();
+        setupCopy();
+        attachPasswordToggles(); // for dashboard logout no effect but fine
+    }
+
+    function showAuth() {
+        document.getElementById('authContainer').classList.remove('hidden');
+        document.getElementById('dashboardContainer').classList.add('hidden');
+        // clear form errors
+        document.getElementById('loginError').innerText = '';
+        document.getElementById('regError').innerText = '';
+        document.getElementById('loginForm').reset();
+        document.getElementById('registerForm').reset();
+        // show login card, hide register
+        document.getElementById('loginCard').classList.remove('hidden');
+        document.getElementById('registerCard').classList.add('hidden');
+    }
+
+    function logout() {
+        sessionStorage.removeItem(SESSION_KEY);
+        showAuth();
+    }
+
+    // event binding
+    function bindAuthEvents() {
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        const showRegBtn = document.getElementById('showRegisterBtn');
+        const backLoginBtn = document.getElementById('backToLoginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const result = loginUser(username, password);
+            if (result.success === true) {
+                showDashboard();
+            } else {
+                document.getElementById('loginError').innerText = result;
+            }
+        });
+
+        registerForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('regUsername').value.trim();
+            const country = document.getElementById('regCountry').value;
+            const phone = document.getElementById('regPhone').value.trim();
+            const password = document.getElementById('regPassword').value;
+            const confirm = document.getElementById('regConfirmPassword').value;
+            const regRes = registerUser(username, country, phone, password, confirm);
+            if (regRes.success === true) {
+                // auto login after registration
+                const autoLogin = loginUser(username, password);
+                if (autoLogin.success === true) {
+                    showDashboard();
+                } else {
+                    document.getElementById('regError').innerText = "Registration OK but auto-login error, please login manually.";
+                    showAuth();
+                }
+            } else {
+                document.getElementById('regError').innerText = regRes;
+            }
+        });
+
+        showRegBtn.addEventListener('click', () => {
+            document.getElementById('loginCard').classList.add('hidden');
+            document.getElementById('registerCard').classList.remove('hidden');
+            document.getElementById('loginError').innerText = '';
+        });
+        backLoginBtn.addEventListener('click', () => {
+            document.getElementById('registerCard').classList.add('hidden');
+            document.getElementById('loginCard').classList.remove('hidden');
+            document.getElementById('regError').innerText = '';
+        });
+        if (logoutBtn) logoutBtn.addEventListener('click', logout);
+    }
+
+    // init whatsapp group (demo link)
+    function setWhatsAppLink() {
+        const waLink = document.getElementById('whatsappGroupLink');
+        if (waLink) waLink.href = "https://chat.whatsapp.com/DONWALLETdemo";
+    }
+
+    // initial load check session
+    function init() {
+        ensureDemoUser();
+        bindAuthEvents();
+        attachPasswordToggles();
+        setWhatsAppLink();
+        initPrices();
+        const current = sessionStorage.getItem(SESSION_KEY);
+        if (current && loadUsers()[current]) {
+            showDashboard();
+        } else {
+            sessionStorage.removeItem(SESSION_KEY);
+            showAuth();
+        }
+    }
+
+    init();
+</script>
+</body>
+</html>
