@@ -66,11 +66,6 @@
 
   .auth-title { font-size:20px; font-weight:800; margin-bottom:4px; }
   .auth-subtitle { font-size:12px; color:var(--muted); margin-bottom:20px; }
-  .demo-hint {
-    background:rgba(56,189,248,.07); border:1px dashed rgba(56,189,248,.25);
-    border-radius:12px; padding:11px 14px; margin-bottom:18px; font-size:12px; color:var(--muted);
-  }
-  .demo-hint strong { color:var(--accent); }
 
   .field-group { margin-bottom:14px; }
   .field-label { font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); margin-bottom:7px; display:block; }
@@ -237,7 +232,7 @@
   .stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
   .stat-box { background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:14px 10px; text-align:center; }
   .stat-label { font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--muted); margin-bottom:8px; }
-  .stat-value { font-size:13px; font-weight:700; font-family:'Space Mono',monospace; }
+  .stat-value { font-size:12px; font-weight:700; font-family:'Space Mono',monospace; }
   .stat-value.dep{color:var(--gold)} .stat-value.earn{color:var(--accent3)} .stat-value.with{color:var(--warn)}
 
   /* REFERRAL */
@@ -288,14 +283,24 @@
   .plan-header-title { font-size:17px; font-weight:800; color:#fff; letter-spacing:.5px; }
   .plan-table { width:100%; border-collapse:collapse; }
   .plan-table thead tr { background:rgba(22,163,74,.4); }
-  .plan-table thead th { padding:13px 10px; font-size:11px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; border-bottom:2px solid rgba(22,163,74,.5); }
+  .plan-table thead th {
+    padding:13px 10px; font-size:11px; font-weight:800; letter-spacing:1.5px;
+    text-transform:uppercase;
+    border-bottom:2px solid #16a34a;
+    border-right:1px solid rgba(22,163,74,.5);
+  }
+  .plan-table thead th:last-child { border-right:none; }
   .plan-table thead th:nth-child(1){color:#fbbf24;text-align:left;padding-left:16px}
   .plan-table thead th:nth-child(2){color:#fff;text-align:center}
   .plan-table thead th:nth-child(3){color:#86efac;text-align:right;padding-right:16px}
-  .plan-table tbody tr { border-bottom:1px solid rgba(22,163,74,.2); transition:background .2s; }
+  .plan-table tbody tr { border-bottom:1px solid rgba(22,163,74,.35); transition:background .2s; }
   .plan-table tbody tr:last-child { border-bottom:none; }
   .plan-table tbody tr:hover { background:rgba(22,163,74,.15); }
-  .plan-table tbody td { padding:12px 10px; font-family:'Space Mono',monospace; font-size:11px; }
+  .plan-table tbody td {
+    padding:12px 10px; font-family:'Space Mono',monospace; font-size:11px;
+    border-right:1px solid rgba(22,163,74,.35);
+  }
+  .plan-table tbody td:last-child { border-right:none; }
   .plan-table tbody td:nth-child(1){color:#fff;font-weight:700;text-align:left;padding-left:16px}
   .plan-table tbody td:nth-child(2){color:#fbbf24;text-align:center}
   .plan-table tbody td:nth-child(3){color:#4ade80;text-align:right;padding-right:16px;font-weight:700}
@@ -390,6 +395,150 @@
     opacity:0; transition:.3s; z-index:9999; pointer-events:none;
   }
   .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* DEPOSIT / WITHDRAW FORM */
+  .action-card {
+    background:linear-gradient(135deg,#0f1f38,#111827);
+    border:1px solid var(--border); border-radius:20px;
+    padding:22px 18px; animation:cardIn .6s ease both;
+  }
+  .green-btn {
+    width:100%; background:#16a34a;
+    border:none; border-radius:14px; padding:16px;
+    font-family:'Syne',sans-serif; font-size:15px; font-weight:800;
+    color:#fff; cursor:pointer; transition:.2s; margin-top:8px;
+    box-shadow:0 4px 24px rgba(22,163,74,.4);
+  }
+  .green-btn:active { transform:scale(.98); }
+  .red-btn {
+    width:100%; background:#dc2626;
+    border:none; border-radius:14px; padding:16px;
+    font-family:'Syne',sans-serif; font-size:15px; font-weight:800;
+    color:#fff; cursor:pointer; transition:.2s; margin-top:8px;
+    box-shadow:0 4px 24px rgba(220,38,38,.4);
+  }
+  .red-btn:active { transform:scale(.98); }
+  .readonly-field {
+    width:100%; background:var(--surface); border:1px solid var(--border);
+    border-radius:12px; padding:13px 14px 13px 42px;
+    font-family:'Space Mono',monospace; font-size:13px; color:var(--muted);
+  }
+  .charge-note {
+    background:rgba(248,113,113,.08); border:1px solid rgba(248,113,113,.2);
+    border-radius:10px; padding:10px 14px; font-size:11px; color:var(--warn);
+    margin-bottom:12px; line-height:1.6;
+  }
+  .deposit-note {
+    background:rgba(52,211,153,.08); border:1px solid rgba(52,211,153,.2);
+    border-radius:10px; padding:10px 14px; font-size:11px; color:var(--accent3);
+    margin-bottom:12px; line-height:1.6;
+  }
+
+  /* POPUP MODAL */
+  .modal-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,.75);
+    z-index:800; display:none; align-items:center; justify-content:center;
+    padding:24px;
+  }
+  .modal-overlay.open { display:flex; }
+  .modal-box {
+    background:linear-gradient(135deg,#0f1f38,#111827);
+    border:1px solid rgba(56,189,248,.25); border-radius:24px;
+    padding:30px 24px; text-align:center; max-width:340px; width:100%;
+    animation:cardUp .4s ease both;
+  }
+  .modal-icon { font-size:48px; margin-bottom:14px; }
+  .modal-title { font-size:17px; font-weight:800; margin-bottom:10px; }
+  .modal-msg { font-size:13px; color:var(--muted); line-height:1.7; margin-bottom:22px; }
+  .modal-close {
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    border:none; border-radius:12px; padding:13px 32px;
+    font-family:'Syne',sans-serif; font-size:14px; font-weight:800;
+    color:#fff; cursor:pointer; transition:.2s;
+  }
+  .modal-close:active { transform:scale(.97); }
+
+  /* HISTORY */
+  .tx-list { display:flex; flex-direction:column; gap:10px; }
+  .tx-item {
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:14px; padding:14px 16px;
+    display:flex; align-items:center; gap:14px;
+  }
+  .tx-icon { font-size:26px; width:42px; height:42px; background:var(--surface); border-radius:10px; display:grid; place-items:center; flex-shrink:0; }
+  .tx-info { flex:1; }
+  .tx-type { font-size:13px; font-weight:700; margin-bottom:3px; }
+  .tx-date { font-size:10px; color:var(--muted); }
+  .tx-amount { font-family:'Space Mono',monospace; font-size:13px; font-weight:700; }
+  .tx-amount.positive { color:var(--accent3); }
+  .tx-amount.negative { color:var(--warn); }
+
+  /* TEAM / REFERRAL */
+  .ref-stats-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:14px; }
+  .ref-stat-box {
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:14px; padding:14px 12px; text-align:center;
+  }
+  .ref-stat-label { font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--muted); margin-bottom:6px; }
+  .ref-stat-val { font-size:14px; font-weight:800; font-family:'Space Mono',monospace; color:var(--accent3); }
+
+  .ref-program-table {
+    width:100%; border-collapse:collapse;
+    background:var(--surface2); border-radius:14px; overflow:hidden;
+    border:1px solid var(--border); margin-bottom:14px;
+  }
+  .ref-program-table thead tr { background:rgba(56,189,248,.1); }
+  .ref-program-table thead th {
+    padding:11px 12px; font-size:10px; font-weight:800;
+    letter-spacing:1.5px; text-transform:uppercase; color:var(--accent);
+    text-align:left;
+  }
+  .ref-program-table tbody tr { border-top:1px solid var(--border); }
+  .ref-program-table tbody td { padding:11px 12px; font-size:12px; font-family:'Space Mono',monospace; }
+  .ref-program-table tbody td:nth-child(1) { color:var(--gold); font-weight:700; }
+  .ref-program-table tbody td:nth-child(2) { color:var(--accent3); font-weight:700; }
+  .ref-program-table tbody td:nth-child(3) { color:var(--muted); font-size:11px; }
+
+  .ref-list-table {
+    width:100%; border-collapse:collapse;
+    background:var(--surface2); border-radius:14px; overflow:hidden;
+    border:1px solid var(--border);
+  }
+  .ref-list-table thead tr { background:rgba(56,189,248,.1); }
+  .ref-list-table thead th {
+    padding:10px 12px; font-size:10px; font-weight:800;
+    letter-spacing:1.5px; text-transform:uppercase; color:var(--accent); text-align:left;
+  }
+  .ref-list-table tbody tr { border-top:1px solid var(--border); }
+  .ref-list-table tbody td { padding:10px 12px; font-size:11px; font-family:'Space Mono',monospace; color:var(--text); }
+  .ref-list-table tbody td:nth-child(3) { color:var(--gold); }
+  .ref-list-table tbody td:nth-child(4) { color:var(--accent3); }
+
+  .section-title {
+    font-size:13px; font-weight:800; text-transform:uppercase;
+    letter-spacing:1px; color:var(--muted); margin-bottom:10px;
+  }
+
+  /* FAQ */
+  .faq-list { display:flex; flex-direction:column; gap:10px; }
+  .faq-item {
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:14px; overflow:hidden; cursor:pointer; transition:border-color .2s;
+  }
+  .faq-item.open { border-color:var(--accent); }
+  .faq-q {
+    display:flex; align-items:center; gap:10px;
+    padding:14px 16px; font-size:13px; font-weight:700; color:var(--text);
+    user-select:none;
+  }
+  .faq-q span:first-child { font-size:16px; flex-shrink:0; }
+  .faq-q .faq-arrow { margin-left:auto; color:var(--muted); font-size:20px; transition:transform .3s; }
+  .faq-item.open .faq-arrow { transform:rotate(90deg); color:var(--accent); }
+  .faq-a {
+    display:none; padding:0 16px 14px 42px;
+    font-size:12px; color:var(--muted); line-height:1.7;
+  }
+  .faq-item.open .faq-a { display:block; }
 </style>
 </head>
 <body>
@@ -404,7 +553,6 @@
   <div class="auth-card">
     <div class="auth-title">Welcome Back 👋</div>
     <div class="auth-subtitle">Sign in to your account</div>
-    <div class="demo-hint">🔑 Demo — Username: <strong>Username</strong> &nbsp;|&nbsp; Password: <strong>Password</strong></div>
     <div class="field-group">
       <label class="field-label">Username</label>
       <div class="field-wrap">
@@ -463,6 +611,10 @@
       </div>
       <div class="field-hint">10 digits, must start with 07</div>
       <div class="field-error" id="reg-phone-err">Phone must be 10 digits starting with 07</div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Referral Code (Optional)</label>
+      <div class="field-wrap"><span class="field-icon">🔗</span><input type="text" id="reg-ref" placeholder="Referral username (optional)"></div>
     </div>
     <div class="field-group">
       <label class="field-label">Password</label>
@@ -532,9 +684,9 @@
     <div class="section">
       <div class="stats-card">
         <div class="stats-grid">
-          <div class="stat-box"><div class="stat-label">Invested</div><div class="stat-value dep">$0.00</div></div>
-          <div class="stat-box"><div class="stat-label">Balance</div><div class="stat-value earn">$0.00</div></div>
-          <div class="stat-box"><div class="stat-label">Withdrawn</div><div class="stat-value with">$0.00</div></div>
+          <div class="stat-box"><div class="stat-label">Invested</div><div class="stat-value dep" id="stat-invested">UGX 0</div></div>
+          <div class="stat-box"><div class="stat-label">Balance</div><div class="stat-value earn" id="stat-balance">UGX 0</div></div>
+          <div class="stat-box"><div class="stat-label">Withdrawn</div><div class="stat-value with" id="stat-withdrawn">UGX 0</div></div>
         </div>
       </div>
     </div>
@@ -559,7 +711,11 @@
   <!-- HISTORY -->
   <div class="dash-section" id="sec-history">
     <div class="inner-header"><span style="font-size:22px">📋</span><div><div class="inner-title">History</div><div class="inner-sub">Your transaction records</div></div></div>
-    <div class="section"><div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">No Transactions Yet</div><div class="empty-text">Your transaction history will appear here once you make a deposit.</div></div></div>
+    <div class="section">
+      <div id="history-list">
+        <div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">No Transactions Yet</div><div class="empty-text">Your transaction history will appear here once you make a deposit.</div></div>
+      </div>
+    </div>
   </div>
 
   <!-- TEAM -->
@@ -570,7 +726,33 @@
         <div class="ref-url" id="ref-url2">https://don-wallet.app/?ref=user</div>
         <button class="copy-btn" onclick="copyRef2()">Copy</button>
       </div>
-      <div class="empty-state"><div class="empty-icon">🤝</div><div class="empty-title">No Referrals Yet</div><div class="empty-text">Share your referral link to grow your team and earn bonuses.</div></div>
+
+      <!-- Referral Stats -->
+      <div class="ref-stats-grid">
+        <div class="ref-stat-box"><div class="ref-stat-label">Total Referrals</div><div class="ref-stat-val" id="total-refs">0</div></div>
+        <div class="ref-stat-box"><div class="ref-stat-label">Total Earned</div><div class="ref-stat-val" id="total-ref-earned">UGX 0</div></div>
+        <div class="ref-stat-box"><div class="ref-stat-label">Invested by Team</div><div class="ref-stat-val" id="total-ref-invested">UGX 0</div></div>
+        <div class="ref-stat-box"><div class="ref-stat-label">Active Referrals</div><div class="ref-stat-val" id="active-refs">0</div></div>
+      </div>
+
+      <!-- Referral Program Table -->
+      <div class="section-title">📊 Referral Program</div>
+      <table class="ref-program-table" style="margin-bottom:14px">
+        <thead>
+          <tr><th>Level</th><th>Bonus</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Level 1</td><td>10%</td><td>Direct referrals</td></tr>
+          <tr><td>Level 2</td><td>4%</td><td>Referrals of referrals</td></tr>
+          <tr><td>Level 3</td><td>1%</td><td>3rd level network</td></tr>
+        </tbody>
+      </table>
+
+      <!-- Referral List -->
+      <div class="section-title">🤝 Referral List</div>
+      <div id="ref-list-wrap">
+        <div class="empty-state" style="padding:30px 20px"><div class="empty-icon">🤝</div><div class="empty-title">No Referrals Yet</div><div class="empty-text">Share your referral link to grow your team and earn bonuses.</div></div>
+      </div>
     </div>
   </div>
 
@@ -624,19 +806,89 @@
   <!-- DEPOSIT -->
   <div class="dash-section" id="sec-deposit">
     <div class="inner-header"><span style="font-size:22px">💳</span><div><div class="inner-title">Deposit</div><div class="inner-sub">Add funds to your wallet</div></div></div>
-    <div class="section"><div class="empty-state"><div class="empty-icon">💳</div><div class="empty-title">Coming Soon</div><div class="empty-text">Deposit functionality will be available shortly. Contact support for manual deposits.</div></div></div>
+    <div class="section">
+      <div class="action-card">
+        <div class="deposit-note">✅ Minimum deposit is <strong>UGX 10,000</strong>. Funds will reflect on your Invested account instantly.</div>
+        <div class="field-group">
+          <label class="field-label">Amount (UGX)</label>
+          <div class="field-wrap">
+            <span class="field-icon">💰</span>
+            <input type="number" id="dep-amount" placeholder="Minimum 10,000" min="10000">
+          </div>
+          <div class="field-error" id="dep-amount-err">Minimum deposit is UGX 10,000</div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Mobile Money Number</label>
+          <div class="field-wrap">
+            <span class="field-icon">📱</span>
+            <input type="tel" id="dep-phone" placeholder="07XXXXXXXX" maxlength="10" oninput="phoneInput(this)">
+          </div>
+          <div class="field-hint">10 digits, must start with 07</div>
+          <div class="field-error" id="dep-phone-err">Phone must be 10 digits starting with 07</div>
+        </div>
+        <button class="green-btn" onclick="doDeposit()">💳 SUBMIT</button>
+      </div>
+    </div>
   </div>
 
   <!-- WITHDRAW -->
   <div class="dash-section" id="sec-withdraw">
     <div class="inner-header"><span style="font-size:22px">💰</span><div><div class="inner-title">Withdraw</div><div class="inner-sub">Cash out your earnings</div></div></div>
-    <div class="section"><div class="empty-state"><div class="empty-icon">💰</div><div class="empty-title">No Balance Yet</div><div class="empty-text">Make a deposit and start earning before you can withdraw.</div></div></div>
+    <div class="section">
+      <div class="action-card">
+        <div class="charge-note">⚠️ Minimum withdrawal is <strong>UGX 5,000</strong>. A <strong>10% service charge</strong> is deducted from every withdrawal.</div>
+        <div class="field-group">
+          <label class="field-label">Amount (UGX)</label>
+          <div class="field-wrap">
+            <span class="field-icon">💸</span>
+            <input type="number" id="with-amount" placeholder="Minimum 5,000" min="5000" oninput="calcWithdraw()">
+          </div>
+          <div class="field-error" id="with-amount-err">Minimum withdrawal is UGX 5,000</div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">You Will Receive</label>
+          <div class="field-wrap">
+            <span class="field-icon">✅</span>
+            <div class="readonly-field" id="with-receive">UGX 0 (after 10% charge)</div>
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Mobile Money Number</label>
+          <div class="field-wrap">
+            <span class="field-icon">📱</span>
+            <div class="readonly-field" id="with-phone-display">—</div>
+          </div>
+          <div class="field-hint">Your registered number — cannot be changed</div>
+        </div>
+        <button class="red-btn" onclick="doWithdraw()">💸 WITHDRAW</button>
+      </div>
+    </div>
   </div>
 
   <!-- REINVEST -->
   <div class="dash-section" id="sec-reinvest">
     <div class="inner-header"><span style="font-size:22px">🔄</span><div><div class="inner-title">Re-Invest</div><div class="inner-sub">Compound your earnings</div></div></div>
-    <div class="section"><div class="empty-state"><div class="empty-icon">🔄</div><div class="empty-title">No Earnings Yet</div><div class="empty-text">Start investing to earn returns you can re-invest.</div></div></div>
+    <div class="section">
+      <div class="action-card">
+        <div class="deposit-note">🔄 Re-invest from your <strong>Balance</strong>. Minimum is <strong>UGX 10,000</strong>. Amount moves to Invested + you earn 10% instant profit.</div>
+        <div class="field-group">
+          <label class="field-label">Available Balance</label>
+          <div class="field-wrap">
+            <span class="field-icon">💼</span>
+            <div class="readonly-field" id="reinvest-balance-display">UGX 0</div>
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Amount to Re-Invest (UGX)</label>
+          <div class="field-wrap">
+            <span class="field-icon">🔄</span>
+            <input type="number" id="reinvest-amount" placeholder="Minimum 10,000" min="10000">
+          </div>
+          <div class="field-error" id="reinvest-amount-err">Minimum re-invest is UGX 10,000</div>
+        </div>
+        <button class="green-btn" onclick="doReinvest()">🔄 RE-INVEST NOW</button>
+      </div>
+    </div>
   </div>
 
   <!-- SUPPORT -->
@@ -646,8 +898,63 @@
       <div class="support-card">
         <div class="support-item"><span class="support-icon">💬</span><div><div class="support-label">WhatsApp</div><div class="support-sub">Chat with our support team</div></div><span class="support-arrow">›</span></div>
         <div class="support-item"><span class="support-icon">📧</span><div><div class="support-label">Email Support</div><div class="support-sub">support@don-wallet.app</div></div><span class="support-arrow">›</span></div>
-        <div class="support-item"><span class="support-icon">📖</span><div><div class="support-label">FAQs</div><div class="support-sub">Frequently asked questions</div></div><span class="support-arrow">›</span></div>
         <div class="support-item"><span class="support-icon">📞</span><div><div class="support-label">Call Us</div><div class="support-sub">Available 8AM – 8PM</div></div><span class="support-arrow">›</span></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">📖 Frequently Asked Questions</div>
+      <div class="faq-list">
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+          <div class="faq-q"><span>❓</span> What is DON-WALLET?<span class="faq-arrow">›</span></div>
+          <div class="faq-a">DON-WALLET is a smart investment platform that allows you to grow your money by earning 10% daily returns on your deposited amount for 60 days. You can also earn referral bonuses by inviting friends to join.</div>
+        </div>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+          <div class="faq-q"><span>❓</span> How do I start investing?<span class="faq-arrow">›</span></div>
+          <div class="faq-a">Simply register an account, then go to the Deposit section. Enter an amount of at least UGX 10,000 and your mobile money number, click SUBMIT and confirm the payment on your phone. Your investment will be activated immediately.</div>
+        </div>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+          <div class="faq-q"><span>❓</span> How much can I earn daily?<span class="faq-arrow">›</span></div>
+          <div class="faq-a">You earn 10% of your deposited amount every day for 60 days. For example, if you deposit UGX 100,000, you earn UGX 10,000 every day, totalling UGX 600,000 after 60 days.</div>
+        </div>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+          <div class="faq-q"><span>❓</span> When are daily profits credited?<span class="faq-arrow">›</span></div>
+          <div class="faq-a">Daily profits are automatically credited to your Balance account every 24 hours from the time of your deposit. You will also receive an instant 10% profit immediately when you make a deposit or re-invest.</div>
+        </div>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+          <div class="faq-q"><span>❓</span> What is the minimum deposit and withdrawal?<span class="faq-arrow">›</span></div>
+          <div class="faq-a">The minimum deposit is UGX 10,000. The minimum withdrawal is UGX 5,000. Note that a 10% service charge is deducted on every withdrawal.</div>
+        </div>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+          <div class="faq-q"><span>❓</span> How does the referral program work?<span class="faq-arrow">›</span></div>
+          <div class="faq-a">When someone registers using your referral link and makes a deposit, you automatically earn a bonus: Level 1 (direct referral) earns 10%, Level 2 earns 4%, and Level 3 earns 1% of their deposited amount. Bonuses are credited to your Balance instantly.</div>
+        </div>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+          <div class="faq-q"><span>❓</span> Can I withdraw my referral bonuses?<span class="faq-arrow">›</span></div>
+          <div class="faq-a">Yes, but only after you have activated your account by making at least one deposit or re-investing a minimum of UGX 10,000. Once your account is activated, all your balance including referral bonuses is available for withdrawal.</div>
+        </div>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+          <div class="faq-q"><span>❓</span> What is Re-Invest and how does it work?<span class="faq-arrow">›</span></div>
+          <div class="faq-a">Re-Invest allows you to move funds from your Balance account into your Invested account, starting a new 60-day profit cycle on that amount. The minimum re-invest amount is UGX 10,000 and you also receive an instant 10% profit when you re-invest.</div>
+        </div>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+          <div class="faq-q"><span>❓</span> How long does a withdrawal take?<span class="faq-arrow">›</span></div>
+          <div class="faq-a">Withdrawals are processed quickly and funds are sent directly to your registered mobile money number. In most cases you will receive your money within minutes. If you experience any delay, please contact our support team.</div>
+        </div>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+          <div class="faq-q"><span>❓</span> Is my money safe on DON-WALLET?<span class="faq-arrow">›</span></div>
+          <div class="faq-a">DON-WALLET is committed to the safety and security of all user funds. All transactions are processed securely through verified mobile money channels. If you have any concerns, please reach out to our support team via WhatsApp, email, or phone.</div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -683,11 +990,37 @@
   <button class="menu-logout" onclick="doLogout()"><span style="font-size:18px">🚪</span>Logout</button>
 </div>
 
+<!-- POPUP MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-icon" id="modal-icon">📱</div>
+    <div class="modal-title" id="modal-title">Action Required</div>
+    <div class="modal-msg" id="modal-msg">Please wait...</div>
+    <button class="modal-close" onclick="closeModal()">OK, Got It</button>
+  </div>
+</div>
+
 <div class="toast" id="toast">✓ Done!</div>
 
-<script>
-  const users = [{ username:'Username', password:'Password', country:'UG', phone:'0700000000' }];
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+  // ── DATA STORE ──
+  const users = [{
+    username: 'Username',
+    password: 'Password',
+    country: 'UG',
+    phone: '0700000000',
+    balance: 4000,
+    invested: 0,
+    withdrawn: 0,
+    refEarned: 0,
+    transactions: [{ type:'Bonus', amount:4000, note:'Registration Bonus', date:'01 Jan 2025 08:00' }],
+    referrals: [],
+    referredBy: null,
+    activated: false,
+    deposits: []  // [{amount, startDate, daysRun}]
+  }];
   let currentUser = null;
+  let dailyProfitTimer = null;
 
   const tabMap = {
     home:'sec-home', history:'sec-history', team:'sec-team',
@@ -697,6 +1030,15 @@
   };
   const navOrder = ['home','history','team','plan','profile'];
 
+  // ── FORMAT ──
+  function fmt(n) { return 'UGX ' + Number(n).toLocaleString(); }
+  function dateStr() {
+    const d = new Date();
+    return d.toLocaleDateString('en-UG', {day:'2-digit',month:'short',year:'numeric'}) + ' ' +
+           d.toLocaleTimeString('en-UG', {hour:'2-digit',minute:'2-digit'});
+  }
+
+  // ── AUTH PAGES ──
   function showAuth(id) {
     document.querySelectorAll('.auth-page').forEach(p => { p.classList.remove('active'); p.style.display='none'; });
     const t = document.getElementById(id);
@@ -709,6 +1051,7 @@
     d.style.display='block'; d.classList.add('active');
   }
 
+  // ── TABS ──
   function switchTab(tab) {
     Object.values(tabMap).forEach(id => { const el=document.getElementById(id); if(el) el.classList.remove('active'); });
     const t = document.getElementById(tabMap[tab]);
@@ -720,9 +1063,9 @@
     document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active-menu'));
     closeMenu();
   }
-
   function menuNav(tab) { switchTab(tab); }
 
+  // ── MENU ──
   function openMenu() {
     document.getElementById('side-menu').classList.add('open');
     document.getElementById('menu-overlay').classList.add('open');
@@ -732,6 +1075,7 @@
     document.getElementById('menu-overlay').classList.remove('open');
   }
 
+  // ── TOAST ──
   function showToast(msg, color) {
     const t = document.getElementById('toast');
     t.textContent = msg;
@@ -741,6 +1085,18 @@
     setTimeout(() => t.classList.remove('show'), 2500);
   }
 
+  // ── MODAL ──
+  function showModal(icon, title, msg) {
+    document.getElementById('modal-icon').textContent = icon;
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-msg').textContent = msg;
+    document.getElementById('modal-overlay').classList.add('open');
+  }
+  function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('open');
+  }
+
+  // ── ERRORS ──
   function setErr(id, show, msg) {
     const el = document.getElementById(id); if(!el) return;
     if(msg) el.textContent = msg;
@@ -749,18 +1105,21 @@
   }
   function clearErrors(...ids) { ids.forEach(id => setErr(id, false)); }
 
+  // ── EYE TOGGLE ──
   function toggleEye(inputId, btn) {
     const inp = document.getElementById(inputId);
     inp.type = inp.type === 'password' ? 'text' : 'password';
     btn.textContent = inp.type === 'password' ? '👁' : '🙈';
   }
 
+  // ── PHONE / COUNTRY ──
   function updatePrefix() {
     const c = document.getElementById('reg-country').value;
     document.getElementById('phone-prefix').textContent = c==='KE' ? '+254' : c==='UG' ? '+256' : '+???';
   }
   function phoneInput(inp) { inp.value = inp.value.replace(/\D/g,'').slice(0,10); }
 
+  // ── PASSWORD STRENGTH ──
   function checkStrength(val) {
     const bars = ['bar1','bar2','bar3','bar4'].map(id => document.getElementById(id));
     bars.forEach(b => b.className='pw-bar');
@@ -774,6 +1133,76 @@
     for(let i=0;i<s;i++) bars[i].classList.add(cls);
   }
 
+  // ── UPDATE UI BALANCES ──
+  function updateBalanceUI() {
+    if(!currentUser) return;
+    document.getElementById('stat-invested').textContent = fmt(currentUser.invested);
+    document.getElementById('stat-balance').textContent = fmt(currentUser.balance);
+    document.getElementById('stat-withdrawn').textContent = fmt(currentUser.withdrawn);
+    updateReinvestDisplay();
+  }
+
+  // ── ADD TRANSACTION ──
+  function addTx(type, amount, note) {
+    if(!currentUser) return;
+    currentUser.transactions.unshift({ type, amount, note, date: dateStr() });
+    renderHistory();
+  }
+
+  // ── RENDER HISTORY ──
+  function renderHistory() {
+    const wrap = document.getElementById('history-list');
+    if(!currentUser || currentUser.transactions.length === 0) {
+      wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">No Transactions Yet</div><div class="empty-text">Your transaction history will appear here once you make a deposit.</div></div>';
+      return;
+    }
+    const icons = { Deposit:'💳', Withdrawal:'💸', Bonus:'🎁', Referral:'🔗', Profit:'📈' };
+    wrap.innerHTML = '<div class="tx-list">' +
+      currentUser.transactions.map(tx => {
+        const pos = tx.amount >= 0;
+        return `<div class="tx-item">
+          <div class="tx-icon">${icons[tx.type] || '💰'}</div>
+          <div class="tx-info">
+            <div class="tx-type">${tx.type}${tx.note ? ' — ' + tx.note : ''}</div>
+            <div class="tx-date">${tx.date}</div>
+          </div>
+          <div class="tx-amount ${pos?'positive':'negative'}">${pos?'+':''}${fmt(tx.amount)}</div>
+        </div>`;
+      }).join('') + '</div>';
+  }
+
+  // ── RENDER TEAM ──
+  function renderTeam() {
+    if(!currentUser) return;
+    const refs = currentUser.referrals; // [{username, invested, level}]
+    document.getElementById('total-refs').textContent = refs.length;
+    const totalInvested = refs.reduce((s,r) => s + r.invested, 0);
+    const totalEarned = currentUser.refEarned || 0;
+    const active = refs.filter(r => r.invested > 0).length;
+    document.getElementById('total-ref-invested').textContent = fmt(totalInvested);
+    document.getElementById('total-ref-earned').textContent = fmt(totalEarned);
+    document.getElementById('active-refs').textContent = active;
+
+    const wrap = document.getElementById('ref-list-wrap');
+    if(refs.length === 0) {
+      wrap.innerHTML = '<div class="empty-state" style="padding:30px 20px"><div class="empty-icon">🤝</div><div class="empty-title">No Referrals Yet</div><div class="empty-text">Share your referral link to grow your team and earn bonuses.</div></div>';
+      return;
+    }
+    wrap.innerHTML = '<table class="ref-list-table"><thead><tr><th>#</th><th>Username</th><th>Invested</th><th>Earned</th><th>Level</th></tr></thead><tbody>' +
+      refs.map((r,i) => {
+        const pct = r.level===1?0.10:r.level===2?0.04:0.01;
+        const earned = Math.floor(r.invested * pct);
+        return `<tr>
+          <td>${i+1}</td>
+          <td>${r.username}</td>
+          <td>${fmt(r.invested)}</td>
+          <td>${fmt(earned)}</td>
+          <td>L${r.level}</td>
+        </tr>`;
+      }).join('') + '</tbody></table>';
+  }
+
+  // ── LOGIN ──
   function doLogin() {
     clearErrors('login-user-err','login-pw-err');
     setErr('login-general-err',false);
@@ -785,28 +1214,42 @@
     if(!ok) return;
     const found = users.find(u=>u.username.toLowerCase()===username.toLowerCase()&&u.password===password);
     if(!found){setErr('login-general-err',true,'❌ Invalid username or password');return;}
-    currentUser=found;
-    const ctry = found.country==='KE'?'🇰🇪 Kenya':'🇺🇬 Uganda';
-    document.getElementById('dash-username').textContent=found.username;
-    document.getElementById('ref-url').textContent=`https://don-wallet.app/?ref=${found.username}`;
-    document.getElementById('ref-url2').textContent=`https://don-wallet.app/?ref=${found.username}`;
-    document.getElementById('profile-name').textContent=found.username;
-    document.getElementById('profile-user').textContent=found.username;
-    document.getElementById('profile-phone').textContent=found.phone;
-    document.getElementById('profile-country').textContent=ctry;
-    document.getElementById('profile-ctry').textContent=ctry;
+    currentUser = found;
+    loadDashboard();
     showDashboard(); switchTab('home');
     showToast('✓ Welcome back, '+found.username+'!');
   }
 
+  // ── LOAD DASHBOARD ──
+  function loadDashboard() {
+    const u = currentUser;
+    const ctry = u.country==='KE'?'🇰🇪 Kenya':'🇺🇬 Uganda';
+    document.getElementById('dash-username').textContent = u.username;
+    document.getElementById('ref-url').textContent = `https://don-wallet.app/?ref=${u.username}`;
+    document.getElementById('ref-url2').textContent = `https://don-wallet.app/?ref=${u.username}`;
+    document.getElementById('profile-name').textContent = u.username;
+    document.getElementById('profile-user').textContent = u.username;
+    document.getElementById('profile-phone').textContent = u.phone;
+    document.getElementById('profile-country').textContent = ctry;
+    document.getElementById('profile-ctry').textContent = ctry;
+    document.getElementById('with-phone-display').textContent = u.phone;
+    updateBalanceUI();
+    renderHistory();
+    renderTeam();
+    updateReinvestDisplay();
+    startDailyProfitTimer();
+  }
+
+  // ── REGISTER ──
   function doRegister() {
     clearErrors('reg-user-err','reg-country-err','reg-phone-err','reg-pw-err','reg-confirm-err');
     setErr('reg-general-err',false);
-    const username=document.getElementById('reg-username').value.trim();
-    const country=document.getElementById('reg-country').value;
-    const phone=document.getElementById('reg-phone').value.trim();
-    const password=document.getElementById('reg-password').value;
-    const confirm=document.getElementById('reg-confirm').value;
+    const username = document.getElementById('reg-username').value.trim();
+    const country  = document.getElementById('reg-country').value;
+    const phone    = document.getElementById('reg-phone').value.trim();
+    const refCode  = document.getElementById('reg-ref').value.trim();
+    const password = document.getElementById('reg-password').value;
+    const confirm  = document.getElementById('reg-confirm').value;
     let ok=true;
     if(!username){setErr('reg-user-err',true);ok=false;}
     else if(users.find(u=>u.username.toLowerCase()===username.toLowerCase())){setErr('reg-user-err',true,'Username already taken');ok=false;}
@@ -815,24 +1258,110 @@
     if(!password||password.length<6){setErr('reg-pw-err',true);ok=false;}
     if(!confirm||confirm!==password){setErr('reg-confirm-err',true);ok=false;}
     if(!ok) return;
-    users.push({username,password,country,phone});
-    showToast('✓ Account created! Please log in.');
-    ['reg-username','reg-phone','reg-password','reg-confirm'].forEach(id=>document.getElementById(id).value='');
+
+    const newUser = {
+      username, password, country, phone,
+      balance: 4000,       // registration bonus
+      invested: 0,
+      withdrawn: 0,
+      refEarned: 0,
+      transactions: [{ type:'Bonus', amount:4000, note:'Registration Bonus', date:dateStr() }],
+      referrals: [],       // [{username, invested, level}]
+      referredBy: null,
+      activated: false,
+      deposits: []         // [{amount, startDate, daysRun}]
+    };
+
+    // Handle referral chain
+    if(refCode) {
+      const ref1 = users.find(u => u.username.toLowerCase() === refCode.toLowerCase());
+      if(ref1) {
+        newUser.referredBy = ref1.username;
+        ref1.referrals.push({ username, invested:0, level:1 });
+        // Level 2
+        if(ref1.referredBy) {
+          const ref2 = users.find(u => u.username === ref1.referredBy);
+          if(ref2) {
+            ref2.referrals.push({ username, invested:0, level:2 });
+            // Level 3
+            if(ref2.referredBy) {
+              const ref3 = users.find(u => u.username === ref2.referredBy);
+              if(ref3) ref3.referrals.push({ username, invested:0, level:3 });
+            }
+          }
+        }
+      }
+    }
+
+    users.push(newUser);
+
+    showToast('✓ Account created! UGX 4,000 bonus added 🎁');
+    ['reg-username','reg-phone','reg-password','reg-confirm','reg-ref'].forEach(id => document.getElementById(id).value='');
     document.getElementById('reg-country').value='';
     updatePrefix(); checkStrength('');
-    setTimeout(()=>showAuth('login-page'),1000);
+    setTimeout(()=>showAuth('login-page'), 1200);
   }
 
+  // ── DAILY PROFIT ENGINE ──
+  // Runs every 24 hours (86400000ms). For demo/testing purposes ticks every 30 seconds too.
+  const DAY_MS = 86400000; // 24 hours in ms
+
+  function runDailyProfits() {
+    if(!currentUser) return;
+    const now = Date.now();
+    let anyPaid = false;
+    currentUser.deposits.forEach(dep => {
+      if(dep.daysRun >= 60) return; // 60-day limit reached
+      const daysSinceStart = Math.floor((now - dep.startDate) / DAY_MS);
+      const daysOwed = Math.min(daysSinceStart, 60) - dep.daysRun;
+      if(daysOwed <= 0) return;
+      for(let d = 0; d < daysOwed; d++) {
+        const dailyProfit = Math.floor(dep.amount * 0.10);
+        currentUser.balance += dailyProfit;
+        currentUser.transactions.unshift({
+          type: 'Profit',
+          amount: dailyProfit,
+          note: `Daily 10% profit (Day ${dep.daysRun + d + 1}/60)`,
+          date: dateStr()
+        });
+      }
+      dep.daysRun += daysOwed;
+      anyPaid = true;
+    });
+    if(anyPaid) {
+      updateBalanceUI();
+      renderHistory();
+      showToast('📈 Daily profit credited to your balance!');
+    }
+  }
+
+  function startDailyProfitTimer() {
+    if(dailyProfitTimer) clearInterval(dailyProfitTimer);
+    // Run immediately on login to catch any missed days
+    runDailyProfits();
+    // Then run every 24 hours
+    dailyProfitTimer = setInterval(runDailyProfits, DAY_MS);
+  }
+
+  function stopDailyProfitTimer() {
+    if(dailyProfitTimer) { clearInterval(dailyProfitTimer); dailyProfitTimer = null; }
+  }
+
+  // ── LOGOUT ──
   function doLogout() {
+    stopDailyProfitTimer();
     currentUser=null; closeMenu();
     showToast('Signed out','#f87171');
     setTimeout(()=>{
       document.getElementById('dashboard-page').style.display='none';
       document.getElementById('dashboard-page').classList.remove('active');
+      document.getElementById('login-username').value='';
+      document.getElementById('login-password').value='';
       showAuth('login-page');
     },800);
   }
 
+  // ── COPY REFERRAL ──
   function copyRef() {
     navigator.clipboard.writeText(document.getElementById('ref-url').textContent).catch(()=>{});
     showToast('✓ Referral link copied!');
@@ -842,7 +1371,165 @@
     showToast('✓ Referral link copied!');
   }
 
-  showAuth('login-page');
+  // ── DEPOSIT ──
+  function doDeposit() {
+    clearErrors('dep-amount-err','dep-phone-err');
+    const amount = parseInt(document.getElementById('dep-amount').value) || 0;
+    const phone  = document.getElementById('dep-phone').value.trim();
+    let ok = true;
+    if(amount < 10000){ setErr('dep-amount-err',true,'Minimum deposit is UGX 10,000'); ok=false; }
+    if(!phone||phone.length!==10||!phone.startsWith('07')){ setErr('dep-phone-err',true,'Phone must be 10 digits starting with 07'); ok=false; }
+    if(!ok) return;
+
+    // Activate account on first deposit
+    currentUser.activated = true;
+
+    // Track deposit for 60-day daily profit
+    currentUser.deposits.push({ amount, startDate: Date.now(), daysRun: 0 });
+
+    // Update invested
+    currentUser.invested += amount;
+    addTx('Deposit', amount, 'Mobile Money');
+
+    // Instant 10% profit goes to Balance
+    const profit = Math.floor(amount * 0.10);
+    currentUser.balance += profit;
+    addTx('Profit', profit, '10% instant profit on deposit');
+
+    updateBalanceUI();
+
+    // Pay referral bonuses to uplines based on deposit amount
+    payReferralBonus(currentUser.username, amount);
+
+    document.getElementById('dep-amount').value='';
+    document.getElementById('dep-phone').value='';
+
+    showModal('📱','Check Your Phone','Check phone and confirm with mobile PIN. If not receiving popup messages, contact customer care.');
+  }
+
+  // ── PAY REFERRAL BONUSES ──
+  function payReferralBonus(depositorUsername, amount) {
+    const pcts = [0.10, 0.04, 0.01]; // Level 1, 2, 3
+    const depositor = users.find(u => u.username === depositorUsername);
+    if(!depositor || !depositor.referredBy) return;
+
+    // Walk up the referral chain: L1 = direct referrer, L2 = referrer's referrer, L3 = next up
+    let uplineUsername = depositor.referredBy;
+    for(let i = 0; i < 3; i++) {
+      if(!uplineUsername) break;
+      const upline = users.find(u => u.username === uplineUsername);
+      if(!upline) break;
+
+      const bonus = Math.floor(amount * pcts[i]);
+      // Credit bonus instantly to upline balance
+      upline.balance += bonus;
+      upline.refEarned = (upline.refEarned || 0) + bonus;
+
+      // Update total invested by this referral in upline's referral list
+      const refEntry = upline.referrals.find(r => r.username === depositorUsername);
+      if(refEntry) refEntry.invested += amount;
+
+      // Record in upline's transaction history
+      upline.transactions.unshift({
+        type: 'Referral',
+        amount: bonus,
+        note: `Level ${i+1} bonus from ${depositorUsername}`,
+        date: dateStr()
+      });
+
+      // If upline is currently logged in, refresh their UI too
+      if(currentUser && currentUser.username === upline.username) {
+        updateBalanceUI();
+        renderHistory();
+        renderTeam();
+      }
+
+      // Move to next upline
+      uplineUsername = upline.referredBy || null;
+    }
+  }
+
+  // ── REINVEST ──
+  function doReinvest() {
+    clearErrors('reinvest-amount-err');
+    const amount = parseInt(document.getElementById('reinvest-amount').value) || 0;
+    if(amount < 10000){ setErr('reinvest-amount-err',true,'Minimum re-invest is UGX 10,000'); return; }
+    if(currentUser.balance < amount){ setErr('reinvest-amount-err',true,'Insufficient balance'); return; }
+
+    // Activate account via re-invest
+    currentUser.activated = true;
+
+    // Track reinvest as deposit for 60-day daily profit
+    currentUser.deposits.push({ amount, startDate: Date.now(), daysRun: 0 });
+
+    // Deduct from balance, add to invested
+    currentUser.balance  -= amount;
+    currentUser.invested += amount;
+    addTx('Re-Invest', -amount, 'Moved from Balance to Invested');
+
+    // Instant 10% profit on re-invest
+    const profit = Math.floor(amount * 0.10);
+    currentUser.balance += profit;
+    addTx('Profit', profit, '10% instant profit on re-invest');
+
+    updateBalanceUI();
+    updateReinvestDisplay();
+
+    document.getElementById('reinvest-amount').value = '';
+    showToast('✓ Re-invested successfully! +' + fmt(profit) + ' profit added.');
+  }
+
+  function updateReinvestDisplay() {
+    const el = document.getElementById('reinvest-balance-display');
+    if(el && currentUser) el.textContent = fmt(currentUser.balance);
+  }
+
+  // ── WITHDRAW CALC ──
+  function calcWithdraw() {
+    const amount = parseInt(document.getElementById('with-amount').value) || 0;
+    const net = amount > 0 ? Math.floor(amount * 0.9) : 0;
+    document.getElementById('with-receive').textContent = amount > 0
+      ? `${fmt(net)} (after 10% charge)`
+      : 'UGX 0 (after 10% charge)';
+  }
+
+  // ── WITHDRAW ──
+  function doWithdraw() {
+    clearErrors('with-amount-err');
+    // Block withdrawal if account not activated (no deposit made yet)
+    if(!currentUser.activated) {
+      showModal('🔒','Account Not Activated','You need to activate your account by making a deposit first before you can withdraw.');
+      return;
+    }
+    const amount = parseInt(document.getElementById('with-amount').value) || 0;
+    let ok = true;
+    if(amount < 5000){ setErr('with-amount-err',true,'Minimum withdrawal is UGX 5,000'); ok=false; }
+    if(!ok) return;
+
+    const charge = Math.floor(amount * 0.10);
+    const net    = amount - charge;
+
+    // Deduct from balance
+    currentUser.balance    -= amount;
+    currentUser.withdrawn  += net;
+
+    addTx('Withdrawal', -amount, `Net: ${fmt(net)} after 10% charge`);
+    updateBalanceUI();
+
+    document.getElementById('with-amount').value='';
+    document.getElementById('with-receive').textContent = 'UGX 0 (after 10% charge)';
+
+    showModal('\u2705','Withdrawal Submitted','You will receive your funds shortly. Thank you.');
+  }
+
+
+  // ── FAQ TOGGLE ──
+  function toggleFaq(el) {
+    const isOpen = el.classList.contains('open');
+    document.querySelectorAll('.faq-item').forEach(f => f.classList.remove('open'));
+    if(!isOpen) el.classList.add('open');
+  }
+
 </script>
 </body>
 </html>
