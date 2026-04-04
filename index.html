@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>DON-WALLET</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
   :root{--bg:#0a0e1a;--surface:#111827;--surface2:#1a2235;--border:rgba(99,179,237,0.12);--accent:#38bdf8;--accent2:#818cf8;--accent3:#34d399;--warn:#f87171;--gold:#fbbf24;--text:#e2e8f0;--muted:#64748b;--glow:0 0 30px rgba(56,189,248,0.15);}
   *{margin:0;padding:0;box-sizing:border-box;}
@@ -101,7 +104,6 @@
   .btn-reinvest{background:linear-gradient(135deg,#7c3aed,#818cf8);color:#fff;box-shadow:0 4px 20px rgba(129,140,248,.3)}
   .wa-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;background:linear-gradient(135deg,#15803d,#22c55e);border:none;border-radius:14px;padding:16px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 4px 20px rgba(34,197,94,.25);transition:.2s;}
   .wa-btn:active{transform:scale(.98);}
-  /* PLAN TABLE - compact for Android */
   .plan-wrap{background:linear-gradient(135deg,#052e16,#14532d);border:2px solid #16a34a;border-radius:16px;overflow:hidden;box-shadow:0 0 40px rgba(22,163,74,.25);animation:cardIn .6s ease both;}
   .plan-header{background:linear-gradient(135deg,#16a34a,#15803d);padding:12px 14px;text-align:center;}
   .plan-header-title{font-size:14px;font-weight:800;color:#fff;letter-spacing:.5px;}
@@ -179,7 +181,7 @@
   .tx-amount{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;}
   .tx-amount.positive{color:var(--accent3);}
   .tx-amount.negative{color:var(--warn);}
-  .tx-pending{color:var(--gold);}
+  .tx-amount.pending{color:var(--gold);}
   .ref-stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px;}
   .ref-stat-box{background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:14px 12px;text-align:center;}
   .ref-stat-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:6px;}
@@ -197,8 +199,6 @@
   .ref-list-table thead th{padding:10px 12px;font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);text-align:left;}
   .ref-list-table tbody tr{border-top:1px solid var(--border);}
   .ref-list-table tbody td{padding:10px 12px;font-size:11px;font-family:'Space Mono',monospace;color:var(--text);}
-  .ref-list-table tbody td:nth-child(3){color:var(--gold);}
-  .ref-list-table tbody td:nth-child(4){color:var(--accent3);}
   .section-title{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px;}
   .faq-list{display:flex;flex-direction:column;gap:10px;}
   .faq-item{background:var(--surface2);border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;transition:border-color .2s;}
@@ -210,12 +210,21 @@
   .faq-a{display:none;padding:0 16px 14px 42px;font-size:12px;color:var(--muted);line-height:1.7;}
   .faq-item.open .faq-a{display:block;}
   .locked-banner{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);border-radius:12px;padding:12px 16px;font-size:12px;color:var(--warn);text-align:center;margin-bottom:12px;font-weight:700;}
+  .loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:16px;}
+  .loading-spinner{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loading-text{font-size:14px;color:var(--muted);}
 </style>
 </head>
 <body>
 
+<div class="loading-screen" id="loading-screen">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Connecting...</div>
+</div>
+
 <!-- LOGIN -->
-<div class="auth-page active" id="login-page">
+<div class="auth-page" id="login-page">
   <div class="auth-hero">
     <div class="auth-logo">💎</div>
     <div class="auth-brand">DON-WALLET</div>
@@ -321,7 +330,6 @@
       <span class="ticker-item"><span class="t-name">ADA/USDT</span><span class="t-up"> ▲ 3.21%</span></span>
     </div>
   </div>
-
   <!-- HOME -->
   <div class="dash-section active" id="sec-home">
     <div class="section">
@@ -334,10 +342,7 @@
       </div>
     </div>
     <div class="section">
-      <div class="ref-box">
-        <div class="ref-url" id="ref-url">https://don-wallet.app/?ref=user</div>
-        <button class="copy-btn" onclick="copyRef()">Copy</button>
-      </div>
+      <div class="ref-box"><div class="ref-url" id="ref-url">https://don-wallet.app/?ref=user</div><button class="copy-btn" onclick="copyRef()">Copy</button></div>
     </div>
     <div class="section">
       <div class="action-grid">
@@ -346,29 +351,22 @@
         <button class="action-btn btn-reinvest" onclick="switchTab('reinvest')"><span class="btn-icon">🔄</span>Re-Invest</button>
       </div>
     </div>
-    <div class="section">
-      <button class="wa-btn" id="wa-group-btn" onclick="openWaGroup()"><span style="font-size:20px">💬</span>Join Community Group</button>
-    </div>
+    <div class="section"><button class="wa-btn" onclick="openWaGroup()"><span style="font-size:20px">💬</span>Join Community Group</button></div>
   </div>
-
   <!-- HISTORY -->
   <div class="dash-section" id="sec-history">
     <div class="inner-header"><span style="font-size:22px">📋</span><div><div class="inner-title">History</div><div class="inner-sub">Your transaction records</div></div></div>
-    <div class="section"><div id="history-list"><div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">No Transactions Yet</div><div class="empty-text">Your transaction history will appear here once you make a deposit.</div></div></div></div>
+    <div class="section"><div id="history-list"><div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">No Transactions Yet</div><div class="empty-text">Your transaction history will appear here.</div></div></div></div>
   </div>
-
   <!-- TEAM -->
   <div class="dash-section" id="sec-team">
     <div class="inner-header"><span style="font-size:22px">👥</span><div><div class="inner-title">My Team</div><div class="inner-sub">Your referrals &amp; earnings</div></div></div>
     <div class="section">
-      <div class="ref-box" style="margin-bottom:14px">
-        <div class="ref-url" id="ref-url2">https://don-wallet.app/?ref=user</div>
-        <button class="copy-btn" onclick="copyRef2()">Copy</button>
-      </div>
+      <div class="ref-box" style="margin-bottom:14px"><div class="ref-url" id="ref-url2">https://don-wallet.app/?ref=user</div><button class="copy-btn" onclick="copyRef2()">Copy</button></div>
       <div class="ref-stats-grid">
         <div class="ref-stat-box"><div class="ref-stat-label">Total Referrals</div><div class="ref-stat-val" id="total-refs">0</div></div>
         <div class="ref-stat-box"><div class="ref-stat-label">Total Earned</div><div class="ref-stat-val" id="total-ref-earned">UGX 0</div></div>
-        <div class="ref-stat-box"><div class="ref-stat-label">Invested by Team</div><div class="ref-stat-val" id="total-ref-invested">UGX 0</div></div>
+        <div class="ref-stat-box"><div class="ref-stat-label">Team Invested</div><div class="ref-stat-val" id="total-ref-invested">UGX 0</div></div>
         <div class="ref-stat-box"><div class="ref-stat-label">Active Referrals</div><div class="ref-stat-val" id="active-refs">0</div></div>
       </div>
       <div class="section-title">📊 Referral Program</div>
@@ -381,10 +379,9 @@
         </tbody>
       </table>
       <div class="section-title">🤝 Referral List</div>
-      <div id="ref-list-wrap"><div class="empty-state" style="padding:30px 20px"><div class="empty-icon">🤝</div><div class="empty-title">No Referrals Yet</div><div class="empty-text">Share your referral link to grow your team and earn bonuses.</div></div></div>
+      <div id="ref-list-wrap"><div class="empty-state" style="padding:30px 20px"><div class="empty-icon">🤝</div><div class="empty-title">No Referrals Yet</div><div class="empty-text">Share your referral link to grow your team.</div></div></div>
     </div>
   </div>
-
   <!-- PLAN -->
   <div class="dash-section" id="sec-plan">
     <div class="inner-header"><span style="font-size:22px">📈</span><div><div class="inner-title">Investment Plan</div><div class="inner-sub">10% daily returns for 60 days</div></div></div>
@@ -392,7 +389,7 @@
       <div class="plan-wrap">
         <div class="plan-header"><div class="plan-header-title">📊 10% DAILY FOR 60 DAYS</div></div>
         <table class="plan-table">
-          <thead><tr><th>💰 INVESTMENT</th><th>📈 DAILY</th><th>🏆 TOTAL (60D)</th></tr></thead>
+          <thead><tr><th>💰 INVEST</th><th>📈 DAILY</th><th>🏆 60 DAYS</th></tr></thead>
           <tbody>
             <tr><td>10,000</td><td>1,000</td><td>60,000</td></tr>
             <tr><td>20,000</td><td>2,000</td><td>120,000</td></tr>
@@ -410,7 +407,6 @@
       </div>
     </div>
   </div>
-
   <!-- PROFILE -->
   <div class="dash-section" id="sec-profile">
     <div class="inner-header"><span style="font-size:22px">👤</span><div><div class="inner-title">Profile</div><div class="inner-sub">Your account details</div></div></div>
@@ -422,13 +418,12 @@
         <div class="profile-detail"><span class="profile-detail-label">Username</span><span class="profile-detail-val" id="profile-user">—</span></div>
         <div class="profile-detail"><span class="profile-detail-label">Phone</span><span class="profile-detail-val" id="profile-phone">—</span></div>
         <div class="profile-detail"><span class="profile-detail-label">Country</span><span class="profile-detail-val" id="profile-ctry">—</span></div>
-        <div class="profile-detail"><span class="profile-detail-label">Member Since</span><span class="profile-detail-val">2025</span></div>
+        <div class="profile-detail"><span class="profile-detail-label">Member Since</span><span class="profile-detail-val" id="profile-since">2025</span></div>
       </div>
       <div style="height:14px"></div>
       <button class="logout-dash" onclick="doLogout()">🚪 Sign Out</button>
     </div>
   </div>
-
   <!-- DEPOSIT -->
   <div class="dash-section" id="sec-deposit">
     <div class="inner-header"><span style="font-size:22px">💳</span><div><div class="inner-title">Deposit</div><div class="inner-sub">Add funds to your wallet</div></div></div>
@@ -450,7 +445,6 @@
       </div>
     </div>
   </div>
-
   <!-- WITHDRAW -->
   <div class="dash-section" id="sec-withdraw">
     <div class="inner-header"><span style="font-size:22px">💰</span><div><div class="inner-title">Withdraw</div><div class="inner-sub">Cash out your earnings</div></div></div>
@@ -476,13 +470,12 @@
       </div>
     </div>
   </div>
-
   <!-- REINVEST -->
   <div class="dash-section" id="sec-reinvest">
     <div class="inner-header"><span style="font-size:22px">🔄</span><div><div class="inner-title">Re-Invest</div><div class="inner-sub">Compound your earnings</div></div></div>
     <div class="section">
       <div class="action-card">
-        <div class="deposit-note">🔄 Re-invest from your <strong>Balance</strong>. Minimum is <strong>UGX 10,000</strong>. Amount moves to Invested + you earn 10% instant profit.</div>
+        <div class="deposit-note">🔄 Re-invest from your <strong>Balance</strong>. Minimum <strong>UGX 10,000</strong>. Moves to Invested + 10% instant profit.</div>
         <div class="field-group">
           <label class="field-label">Available Balance</label>
           <div class="field-wrap"><span class="field-icon">💼</span><div class="readonly-field" id="reinvest-balance-display">UGX 0</div></div>
@@ -496,13 +489,12 @@
       </div>
     </div>
   </div>
-
   <!-- SUPPORT -->
   <div class="dash-section" id="sec-support">
     <div class="inner-header"><span style="font-size:22px">🎧</span><div><div class="inner-title">Support</div><div class="inner-sub">We're here to help</div></div></div>
     <div class="section">
       <div class="support-card">
-        <div class="support-item" id="wa-support-item" onclick="openWaSupport()"><span class="support-icon">💬</span><div><div class="support-label">WhatsApp Support</div><div class="support-sub">Chat with our support team</div></div><span class="support-arrow">›</span></div>
+        <div class="support-item" onclick="openWaSupport()"><span class="support-icon">💬</span><div><div class="support-label">WhatsApp Support</div><div class="support-sub">Chat with our support team</div></div><span class="support-arrow">›</span></div>
         <div class="support-item"><span class="support-icon">📧</span><div><div class="support-label">Email Support</div><div class="support-sub">support@don-wallet.app</div></div><span class="support-arrow">›</span></div>
         <div class="support-item"><span class="support-icon">📞</span><div><div class="support-label">Call Us</div><div class="support-sub">Available 8AM – 8PM</div></div><span class="support-arrow">›</span></div>
       </div>
@@ -510,20 +502,19 @@
     <div class="section">
       <div class="section-title">📖 Frequently Asked Questions</div>
       <div class="faq-list">
-        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span> What is DON-WALLET?<span class="faq-arrow">›</span></div><div class="faq-a">DON-WALLET is a smart investment platform that allows you to grow your money by earning 10% daily returns on your deposited amount for 60 days. You can also earn referral bonuses by inviting friends to join.</div></div>
-        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span> How do I start investing?<span class="faq-arrow">›</span></div><div class="faq-a">Register an account, then go to the Deposit section. Enter at least UGX 10,000 and your mobile money number, click SUBMIT and confirm the payment on your phone. Your investment activates after admin approval.</div></div>
-        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span> How much can I earn daily?<span class="faq-arrow">›</span></div><div class="faq-a">You earn 10% of your deposited amount every day for 60 days. For example, deposit UGX 100,000 → earn UGX 10,000 every day → total UGX 600,000 after 60 days.</div></div>
-        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span> When are daily profits credited?<span class="faq-arrow">›</span></div><div class="faq-a">Daily profits are automatically credited to your Balance every 24 hours. You also receive an instant 10% profit immediately when your deposit or re-invest is approved.</div></div>
-        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span> What is the minimum deposit and withdrawal?<span class="faq-arrow">›</span></div><div class="faq-a">The minimum deposit is UGX 10,000. The minimum withdrawal is UGX 5,000. A 10% service charge is deducted on every withdrawal.</div></div>
-        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span> How does the referral program work?<span class="faq-arrow">›</span></div><div class="faq-a">When someone registers using your referral link and makes a deposit, you automatically earn: Level 1 (direct) 10%, Level 2 earns 4%, Level 3 earns 1% of their deposited amount — credited to your Balance instantly.</div></div>
-        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span> Can I withdraw my referral bonuses?<span class="faq-arrow">›</span></div><div class="faq-a">Yes, but only after you activate your account by depositing or re-investing at least UGX 10,000. Once activated, all balance including referral bonuses is available for withdrawal.</div></div>
-        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span> What is Re-Invest and how does it work?<span class="faq-arrow">›</span></div><div class="faq-a">Re-Invest moves funds from your Balance to your Invested account, starting a new 60-day profit cycle. Minimum is UGX 10,000 and you receive an instant 10% profit when you re-invest.</div></div>
-        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span> How long does a withdrawal take?<span class="faq-arrow">›</span></div><div class="faq-a">Withdrawals are reviewed by our admin team and processed quickly. Funds are sent to your registered mobile money number. If delayed, contact our support team.</div></div>
-        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span> Is my money safe on DON-WALLET?<span class="faq-arrow">›</span></div><div class="faq-a">DON-WALLET is committed to security of all user funds. All transactions are processed through verified mobile money channels. Contact our support team for any concerns.</div></div>
+        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>What is DON-WALLET?<span class="faq-arrow">›</span></div><div class="faq-a">DON-WALLET is a smart investment platform that allows you to grow your money by earning 10% daily returns on your deposited amount for 60 days. You can also earn referral bonuses by inviting friends to join.</div></div>
+        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>How do I start investing?<span class="faq-arrow">›</span></div><div class="faq-a">Register an account, go to Deposit, enter at least UGX 10,000 and your mobile money number, click SUBMIT and confirm the payment. Your investment activates after admin approval.</div></div>
+        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>How much can I earn daily?<span class="faq-arrow">›</span></div><div class="faq-a">You earn 10% of your deposited amount every day for 60 days. Example: deposit UGX 100,000 → earn UGX 10,000/day → total UGX 600,000 after 60 days.</div></div>
+        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>When are daily profits credited?<span class="faq-arrow">›</span></div><div class="faq-a">Daily profits are automatically credited to your Balance every 24 hours. You also get an instant 10% profit when your deposit is approved.</div></div>
+        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>What is the minimum deposit and withdrawal?<span class="faq-arrow">›</span></div><div class="faq-a">Minimum deposit is UGX 10,000. Minimum withdrawal is UGX 5,000. A 10% service charge is deducted on every withdrawal.</div></div>
+        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>How does the referral program work?<span class="faq-arrow">›</span></div><div class="faq-a">When someone registers using your referral link and deposits, you earn: Level 1 (direct) 10%, Level 2 earns 4%, Level 3 earns 1% — credited to your Balance instantly.</div></div>
+        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>Can I withdraw my referral bonuses?<span class="faq-arrow">›</span></div><div class="faq-a">Yes, but only after activating your account by depositing or re-investing at least UGX 10,000.</div></div>
+        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>What is Re-Invest?<span class="faq-arrow">›</span></div><div class="faq-a">Re-Invest moves funds from your Balance to Invested, starting a new 60-day profit cycle. Minimum UGX 10,000, plus you get instant 10% profit.</div></div>
+        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>How long does a withdrawal take?<span class="faq-arrow">›</span></div><div class="faq-a">Withdrawals are reviewed by admin and processed quickly. Funds are sent to your registered mobile money number. Contact support if delayed.</div></div>
+        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>Is my money safe?<span class="faq-arrow">›</span></div><div class="faq-a">DON-WALLET is committed to the security of all user funds. All transactions go through verified mobile money channels. Contact support for any concerns.</div></div>
       </div>
     </div>
   </div>
-
   <nav class="bottom-nav">
     <div class="nav-item active" onclick="switchTab('home')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></div>
     <div class="nav-item" onclick="switchTab('history')"><span class="nav-icon">📋</span><span class="nav-label">History</span></div>
@@ -561,64 +552,45 @@
 <div class="toast" id="toast">✓ Done!</div>
 
 <script>
-// ── SHARED STORAGE KEYS ──
-const STORE_USERS   = 'dw_users';
-const STORE_DEP_Q   = 'dw_deposit_queue';
-const STORE_WITH_Q  = 'dw_withdraw_queue';
-const STORE_SETTINGS= 'dw_settings';
+// ── FIREBASE INIT ──
+const firebaseConfig = {
+  apiKey: "AIzaSyAsW9rbAx4rJ_MjZF4sLzWoID11Ui6aaCs",
+  authDomain: "don-wallet-e68b3.firebaseapp.com",
+  databaseURL: "https://don-wallet-e68b3-default-rtdb.firebaseio.com",
+  projectId: "don-wallet-e68b3",
+  storageBucket: "don-wallet-e68b3.firebasestorage.app",
+  messagingSenderId: "247769658378",
+  appId: "1:247769658378:web:403d491e1317c7d56f9bf3"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-function loadStore(key, def){ try{ return JSON.parse(localStorage.getItem(key))||def; }catch(e){ return def; } }
-function saveStore(key,val){ localStorage.setItem(key, JSON.stringify(val)); }
+// ── DB HELPERS ──
+const ref = (path) => db.ref(path);
+const dbGet = (path) => db.ref(path).get().then(s => s.val());
+const dbSet = (path, val) => db.ref(path).set(val);
+const dbUpdate = (path, val) => db.ref(path).update(val);
+const dbPush = (path, val) => db.ref(path).push(val);
 
-function getSettings(){
-  return loadStore(STORE_SETTINGS,{
-    uraTax:3.7, withdrawCharge:10,
-    refL1:10, refL2:4, refL3:1,
-    waGroup:'', waSupport:'',
-    withdrawLocked:false
-  });
-}
-function getUsers(){ 
-  const u = loadStore(STORE_USERS,[]);
-  if(!u.length){
-    // seed demo user
-    const demo = [{
-      username:'Username',password:'Password',country:'UG',phone:'0700000000',
-      balance:4000,invested:0,withdrawn:0,refEarned:0,
-      transactions:[{type:'Bonus',amount:4000,note:'Registration Bonus',date:'01 Jan 2025 08:00'}],
-      referrals:[],referredBy:null,activated:false,deposits:[],locked:false
-    }];
-    saveStore(STORE_USERS,demo);
-    return demo;
-  }
-  return u;
-}
-function saveUsers(u){ saveStore(STORE_USERS,u); }
-function getDepQ(){ return loadStore(STORE_DEP_Q,[]); }
-function saveDepQ(q){ saveStore(STORE_DEP_Q,q); }
-function getWithQ(){ return loadStore(STORE_WITH_Q,[]); }
-function saveWithQ(q){ saveStore(STORE_WITH_Q,q); }
-
+// ── STATE ──
 let currentUser = null;
+let currentUsername = null;
 let dailyProfitTimer = null;
+let userListener = null;
+let settingsData = { uraTax:3.7, withdrawCharge:10, refL1:10, refL2:4, refL3:1, waGroup:'', waSupport:'', withdrawLocked:false };
 
 const tabMap = {home:'sec-home',history:'sec-history',team:'sec-team',plan:'sec-plan',profile:'sec-profile',deposit:'sec-deposit',withdraw:'sec-withdraw',reinvest:'sec-reinvest',support:'sec-support'};
 const navOrder = ['home','history','team','plan','profile'];
 
-function fmt(n){ return 'UGX '+Number(n).toLocaleString(); }
+function fmt(n){ return 'UGX '+Number(n||0).toLocaleString(); }
 function dateStr(){ const d=new Date(); return d.toLocaleDateString('en-UG',{day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-UG',{hour:'2-digit',minute:'2-digit'}); }
+function safeKey(username){ return username.replace(/[.#$\[\]]/g,'_'); }
 
+// ── UI HELPERS ──
 function showAuth(id){ document.querySelectorAll('.auth-page').forEach(p=>{p.classList.remove('active');p.style.display='none';}); const t=document.getElementById(id); t.style.display='flex'; t.classList.add('active'); }
-function showDashboard(){ document.querySelectorAll('.auth-page').forEach(p=>{p.classList.remove('active');p.style.display='none';}); const d=document.getElementById('dashboard-page'); d.style.display='block'; d.classList.add('active'); }
-
-function switchTab(tab){
-  Object.values(tabMap).forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('active');});
-  const t=document.getElementById(tabMap[tab]); if(t)t.classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  const idx=navOrder.indexOf(tab); if(idx>=0)document.querySelectorAll('.nav-item')[idx].classList.add('active');
-  document.querySelectorAll('.menu-item').forEach(m=>m.classList.remove('active-menu'));
-  closeMenu();
-}
+function showDashboard(){ document.querySelectorAll('.auth-page').forEach(p=>{p.classList.remove('active');p.style.display='none';}); document.getElementById('dashboard-page').style.display='block'; document.getElementById('dashboard-page').classList.add('active'); }
+function hideLoading(){ document.getElementById('loading-screen').style.display='none'; }
+function switchTab(tab){ Object.values(tabMap).forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('active');}); const t=document.getElementById(tabMap[tab]); if(t)t.classList.add('active'); document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active')); const idx=navOrder.indexOf(tab); if(idx>=0)document.querySelectorAll('.nav-item')[idx].classList.add('active'); document.querySelectorAll('.menu-item').forEach(m=>m.classList.remove('active-menu')); closeMenu(); }
 function menuNav(tab){ switchTab(tab); }
 function openMenu(){ document.getElementById('side-menu').classList.add('open'); document.getElementById('menu-overlay').classList.add('open'); }
 function closeMenu(){ document.getElementById('side-menu').classList.remove('open'); document.getElementById('menu-overlay').classList.remove('open'); }
@@ -631,80 +603,115 @@ function toggleEye(inputId,btn){ const inp=document.getElementById(inputId); inp
 function updatePrefix(){ const c=document.getElementById('reg-country').value; document.getElementById('phone-prefix').textContent=c==='KE'?'+254':c==='UG'?'+256':'+???'; }
 function phoneInput(inp){ inp.value=inp.value.replace(/\D/g,'').slice(0,10); }
 function checkStrength(val){ const bars=['bar1','bar2','bar3','bar4'].map(id=>document.getElementById(id)); bars.forEach(b=>b.className='pw-bar'); if(!val)return; let s=0; if(val.length>=6)s++; if(val.length>=10)s++; if(/[A-Z]/.test(val)&&/[0-9]/.test(val))s++; if(/[^A-Za-z0-9]/.test(val))s++; const cls=s<=1?'weak':s===2?'medium':'strong'; for(let i=0;i<s;i++)bars[i].classList.add(cls); }
+function openWaGroup(){ if(settingsData.waGroup)window.open(settingsData.waGroup,'_blank'); else showToast('Group link not set yet','#f87171'); }
+function openWaSupport(){ if(settingsData.waSupport)window.open(settingsData.waSupport,'_blank'); else showToast('Support link not set yet','#f87171'); }
+function toggleFaq(el){ const o=el.classList.contains('open'); document.querySelectorAll('.faq-item').forEach(f=>f.classList.remove('open')); if(!o)el.classList.add('open'); }
+function copyRef(){ navigator.clipboard.writeText(document.getElementById('ref-url').textContent).catch(()=>{}); showToast('✓ Referral link copied!'); }
+function copyRef2(){ navigator.clipboard.writeText(document.getElementById('ref-url2').textContent).catch(()=>{}); showToast('✓ Referral link copied!'); }
 
+// ── UPDATE UI ──
 function updateBalanceUI(){
   if(!currentUser)return;
   document.getElementById('stat-invested').textContent=fmt(currentUser.invested);
   document.getElementById('stat-balance').textContent=fmt(currentUser.balance);
   document.getElementById('stat-withdrawn').textContent=fmt(currentUser.withdrawn);
-  updateReinvestDisplay();
-}
-
-function addTx(type,amount,note){
-  if(!currentUser)return;
-  currentUser.transactions.unshift({type,amount,note,date:dateStr()});
-  persistCurrentUser();
-  renderHistory();
-}
-
-function persistCurrentUser(){
-  const users=getUsers();
-  const idx=users.findIndex(u=>u.username===currentUser.username);
-  if(idx>=0){ users[idx]=currentUser; saveUsers(users); }
+  const el=document.getElementById('reinvest-balance-display'); if(el)el.textContent=fmt(currentUser.balance);
 }
 
 function renderHistory(){
   const wrap=document.getElementById('history-list');
-  if(!currentUser||!currentUser.transactions.length){
-    wrap.innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">No Transactions Yet</div><div class="empty-text">Your transaction history will appear here once you make a deposit.</div></div>';
-    return;
-  }
-  const icons={Deposit:'💳',Withdrawal:'💸',Bonus:'🎁',Referral:'🔗',Profit:'📈','Re-Invest':'🔄',Pending:'⏳'};
-  wrap.innerHTML='<div class="tx-list">'+currentUser.transactions.map(tx=>{
-    const pos=tx.amount>=0;
-    const isPending=tx.status==='pending';
-    return `<div class="tx-item"><div class="tx-icon">${icons[tx.type]||'💰'}</div><div class="tx-info"><div class="tx-type">${tx.type}${tx.note?' — '+tx.note:''}</div><div class="tx-date">${tx.date}</div></div><div class="tx-amount ${isPending?'tx-pending':pos?'positive':'negative'}">${isPending?'Pending':pos?'+'+fmt(tx.amount):fmt(tx.amount)}</div></div>`;
+  const txs=currentUser.transactions?Object.values(currentUser.transactions).reverse():[];
+  if(!txs.length){ wrap.innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">No Transactions Yet</div><div class="empty-text">Your transaction history will appear here.</div></div>'; return; }
+  const icons={Deposit:'💳',Withdrawal:'💸',Bonus:'🎁',Referral:'🔗',Profit:'📈','Re-Invest':'🔄'};
+  wrap.innerHTML='<div class="tx-list">'+txs.map(tx=>{
+    const pos=tx.amount>=0; const isPending=tx.status==='pending';
+    return `<div class="tx-item"><div class="tx-icon">${icons[tx.type]||'💰'}</div><div class="tx-info"><div class="tx-type">${tx.type}${tx.note?' — '+tx.note:''}</div><div class="tx-date">${tx.date}</div></div><div class="tx-amount ${isPending?'pending':pos?'positive':'negative'}">${isPending?'⏳ Pending':pos?'+'+fmt(tx.amount):fmt(tx.amount)}</div></div>`;
   }).join('')+'</div>';
 }
 
 function renderTeam(){
   if(!currentUser)return;
-  const s=getSettings();
-  document.getElementById('ref-pct-l1-display').textContent=s.refL1+'%';
-  document.getElementById('ref-pct-l2-display').textContent=s.refL2+'%';
-  document.getElementById('ref-pct-l3-display').textContent=s.refL3+'%';
-  const refs=currentUser.referrals;
+  document.getElementById('ref-pct-l1-display').textContent=settingsData.refL1+'%';
+  document.getElementById('ref-pct-l2-display').textContent=settingsData.refL2+'%';
+  document.getElementById('ref-pct-l3-display').textContent=settingsData.refL3+'%';
+  const refs=currentUser.referrals?Object.values(currentUser.referrals):[];
   document.getElementById('total-refs').textContent=refs.length;
-  document.getElementById('total-ref-invested').textContent=fmt(refs.reduce((a,r)=>a+r.invested,0));
+  document.getElementById('total-ref-invested').textContent=fmt(refs.reduce((a,r)=>a+(r.invested||0),0));
   document.getElementById('total-ref-earned').textContent=fmt(currentUser.refEarned||0);
-  document.getElementById('active-refs').textContent=refs.filter(r=>r.invested>0).length;
+  document.getElementById('active-refs').textContent=refs.filter(r=>(r.invested||0)>0).length;
   const wrap=document.getElementById('ref-list-wrap');
   if(!refs.length){ wrap.innerHTML='<div class="empty-state" style="padding:30px 20px"><div class="empty-icon">🤝</div><div class="empty-title">No Referrals Yet</div><div class="empty-text">Share your referral link to grow your team.</div></div>'; return; }
   wrap.innerHTML='<table class="ref-list-table"><thead><tr><th>#</th><th>Username</th><th>Invested</th><th>Earned</th><th>Lvl</th></tr></thead><tbody>'+refs.map((r,i)=>{
-    const s2=getSettings(); const pct=r.level===1?s2.refL1/100:r.level===2?s2.refL2/100:s2.refL3/100;
-    return `<tr><td>${i+1}</td><td>${r.username}</td><td>${fmt(r.invested)}</td><td>${fmt(Math.floor(r.invested*pct))}</td><td>L${r.level}</td></tr>`;
+    const pct=r.level===1?settingsData.refL1/100:r.level===2?settingsData.refL2/100:settingsData.refL3/100;
+    return `<tr><td>${i+1}</td><td>${r.username}</td><td>${fmt(r.invested||0)}</td><td>${fmt(Math.floor((r.invested||0)*pct))}</td><td>L${r.level}</td></tr>`;
   }).join('')+'</tbody></table>';
 }
 
-function updateReinvestDisplay(){ const el=document.getElementById('reinvest-balance-display'); if(el&&currentUser)el.textContent=fmt(currentUser.balance); }
+// ── REALTIME LISTENER ──
+function startUserListener(username){
+  if(userListener){ db.ref('users/'+safeKey(username)).off('value',userListener); }
+  userListener = db.ref('users/'+safeKey(username)).on('value', snap=>{
+    if(!snap.exists())return;
+    currentUser = snap.val();
+    updateBalanceUI();
+    renderHistory();
+    renderTeam();
+    // Check withdraw lock
+    const lockMsg=document.getElementById('withdraw-locked-msg');
+    if(lockMsg)lockMsg.style.display=settingsData.withdrawLocked?'block':'none';
+  });
+}
 
-function openWaGroup(){ const s=getSettings(); if(s.waGroup)window.open(s.waGroup,'_blank'); else showToast('Group link not set yet','#f87171'); }
-function openWaSupport(){ const s=getSettings(); if(s.waSupport)window.open(s.waSupport,'_blank'); else showToast('Support link not set yet','#f87171'); }
+function startSettingsListener(){
+  db.ref('settings').on('value', snap=>{
+    if(snap.exists()){ settingsData=snap.val(); }
+    if(currentUser){ renderTeam(); const lockMsg=document.getElementById('withdraw-locked-msg'); if(lockMsg)lockMsg.style.display=settingsData.withdrawLocked?'block':'none'; }
+  });
+}
+
+// ── APP INIT ──
+async function initApp(){
+  startSettingsListener();
+  const savedUser = sessionStorage.getItem('dw_current_user');
+  if(savedUser){
+    currentUsername = savedUser;
+    const userData = await dbGet('users/'+safeKey(savedUser));
+    if(userData && !userData.locked){
+      currentUser = userData;
+      loadDashboard();
+      showDashboard();
+      switchTab('home');
+      startUserListener(savedUser);
+      startDailyProfitTimer();
+    } else {
+      sessionStorage.removeItem('dw_current_user');
+      hideLoading();
+      showAuth('login-page');
+    }
+  } else {
+    hideLoading();
+    showAuth('login-page');
+  }
+}
 
 // ── LOGIN ──
-function doLogin(){
+async function doLogin(){
   clearErrors('login-user-err','login-pw-err'); setErr('login-general-err',false);
   const username=document.getElementById('login-username').value.trim();
   const password=document.getElementById('login-password').value;
   if(!username){setErr('login-user-err',true);return;}
   if(!password){setErr('login-pw-err',true);return;}
-  const users=getUsers();
-  const found=users.find(u=>u.username.toLowerCase()===username.toLowerCase()&&u.password===password);
-  if(!found){setErr('login-general-err',true,'❌ Invalid username or password');return;}
-  if(found.locked){setErr('login-general-err',true,'🔒 Your account has been locked. Contact support.');return;}
-  currentUser=found;
-  loadDashboard(); showDashboard(); switchTab('home');
-  showToast('✓ Welcome back, '+found.username+'!');
+  try{
+    const userData = await dbGet('users/'+safeKey(username));
+    if(!userData||userData.password!==password){ setErr('login-general-err',true,'❌ Invalid username or password'); return; }
+    if(userData.locked){ setErr('login-general-err',true,'🔒 Your account has been locked. Contact support.'); return; }
+    currentUser=userData; currentUsername=username;
+    sessionStorage.setItem('dw_current_user', username);
+    loadDashboard(); showDashboard(); switchTab('home');
+    startUserListener(username);
+    startDailyProfitTimer();
+    showToast('✓ Welcome back, '+username+'!');
+  } catch(e){ setErr('login-general-err',true,'❌ Connection error. Try again.'); }
 }
 
 function loadDashboard(){
@@ -719,24 +726,13 @@ function loadDashboard(){
   document.getElementById('profile-country').textContent=ctry;
   document.getElementById('profile-ctry').textContent=ctry;
   document.getElementById('with-phone-display').textContent=u.phone;
-  const s=getSettings();
-  const lockMsg=document.getElementById('withdraw-locked-msg');
-  if(lockMsg)lockMsg.style.display=s.withdrawLocked?'block':'none';
-  updateBalanceUI(); renderHistory(); renderTeam(); updateReinvestDisplay();
-  startDailyProfitTimer();
-  // Check for any approved/rejected transactions from admin
-  checkPendingResults();
-}
-
-function checkPendingResults(){
-  // Reload currentUser from store to pick up any admin actions
-  const users=getUsers();
-  const fresh=users.find(u=>u.username===currentUser.username);
-  if(fresh){ currentUser=fresh; updateBalanceUI(); renderHistory(); }
+  document.getElementById('profile-since').textContent=u.joinedDate||'2025';
+  hideLoading();
+  updateBalanceUI(); renderHistory(); renderTeam();
 }
 
 // ── REGISTER ──
-function doRegister(){
+async function doRegister(){
   clearErrors('reg-user-err','reg-country-err','reg-phone-err','reg-pw-err','reg-confirm-err');
   const username=document.getElementById('reg-username').value.trim();
   const country=document.getElementById('reg-country').value;
@@ -745,163 +741,166 @@ function doRegister(){
   const password=document.getElementById('reg-password').value;
   const confirm=document.getElementById('reg-confirm').value;
   let ok=true;
-  const users=getUsers();
   if(!username){setErr('reg-user-err',true);ok=false;}
-  else if(users.find(u=>u.username.toLowerCase()===username.toLowerCase())){setErr('reg-user-err',true,'Username already taken');ok=false;}
   if(!country){setErr('reg-country-err',true);ok=false;}
   if(!phone||phone.length!==10||!phone.startsWith('07')){setErr('reg-phone-err',true);ok=false;}
   if(!password||password.length<6){setErr('reg-pw-err',true);ok=false;}
   if(!confirm||confirm!==password){setErr('reg-confirm-err',true);ok=false;}
   if(!ok)return;
-  const newUser={username,password,country,phone,balance:4000,invested:0,withdrawn:0,refEarned:0,transactions:[{type:'Bonus',amount:4000,note:'Registration Bonus',date:dateStr()}],referrals:[],referredBy:null,activated:false,deposits:[],locked:false};
-  if(refCode){
-    const ref1=users.find(u=>u.username.toLowerCase()===refCode.toLowerCase());
-    if(ref1){
-      newUser.referredBy=ref1.username;
-      ref1.referrals.push({username,invested:0,level:1});
-      if(ref1.referredBy){
-        const ref2=users.find(u=>u.username===ref1.referredBy);
-        if(ref2){ ref2.referrals.push({username,invested:0,level:2}); if(ref2.referredBy){const ref3=users.find(u=>u.username===ref2.referredBy);if(ref3)ref3.referrals.push({username,invested:0,level:3});} }
+  try{
+    const existing = await dbGet('users/'+safeKey(username));
+    if(existing){setErr('reg-user-err',true,'Username already taken');return;}
+    const now=dateStr();
+    const newUser={
+      username,password,country,phone,
+      balance:4000,invested:0,withdrawn:0,refEarned:0,
+      activated:false,locked:false,
+      referredBy:refCode||null,
+      joinedDate:new Date().getFullYear().toString(),
+      transactions:{ t0:{type:'Bonus',amount:4000,note:'Registration Bonus',date:now} },
+      referrals:{}, deposits:{}
+    };
+    await dbSet('users/'+safeKey(username), newUser);
+    // Handle referral chain
+    if(refCode){
+      const ref1=await dbGet('users/'+safeKey(refCode));
+      if(ref1){
+        await dbSet('users/'+safeKey(refCode)+'/referrals/'+safeKey(username),{username,invested:0,level:1});
+        if(ref1.referredBy){
+          const ref2=await dbGet('users/'+safeKey(ref1.referredBy));
+          if(ref2){
+            await dbSet('users/'+safeKey(ref1.referredBy)+'/referrals/'+safeKey(username),{username,invested:0,level:2});
+            if(ref2.referredBy){
+              await dbSet('users/'+safeKey(ref2.referredBy)+'/referrals/'+safeKey(username),{username,invested:0,level:3});
+            }
+          }
+        }
       }
     }
-  }
-  users.push(newUser); saveUsers(users);
-  showToast('✓ Account created! UGX 4,000 bonus added 🎁');
-  ['reg-username','reg-phone','reg-password','reg-confirm','reg-ref'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('reg-country').value=''; updatePrefix(); checkStrength('');
-  setTimeout(()=>showAuth('login-page'),1200);
+    showToast('✓ Account created! UGX 4,000 bonus added 🎁');
+    ['reg-username','reg-phone','reg-password','reg-confirm','reg-ref'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('reg-country').value=''; updatePrefix(); checkStrength('');
+    setTimeout(()=>showAuth('login-page'),1200);
+  } catch(e){ setErr('reg-general-err',true,'❌ Registration failed. Try again.'); console.error(e); }
 }
 
 // ── DAILY PROFIT ──
 const DAY_MS=86400000;
-function runDailyProfits(){
-  if(!currentUser)return;
-  const now=Date.now(); let anyPaid=false;
-  currentUser.deposits.forEach(dep=>{
-    if(dep.daysRun>=60)return;
+async function runDailyProfits(){
+  if(!currentUser||!currentUsername)return;
+  const now=Date.now();
+  const deposits=currentUser.deposits?Object.entries(currentUser.deposits):[];
+  let anyPaid=false;
+  const updates={};
+  let newBalance=currentUser.balance||0;
+  for(const [key,dep] of deposits){
+    if((dep.daysRun||0)>=60)continue;
     const daysSince=Math.floor((now-dep.startDate)/DAY_MS);
-    const owed=Math.min(daysSince,60)-dep.daysRun;
-    if(owed<=0)return;
+    const owed=Math.min(daysSince,60)-(dep.daysRun||0);
+    if(owed<=0)continue;
     for(let d=0;d<owed;d++){
       const profit=Math.floor(dep.amount*0.10);
-      currentUser.balance+=profit;
-      currentUser.transactions.unshift({type:'Profit',amount:profit,note:`Daily 10% profit (Day ${dep.daysRun+d+1}/60)`,date:dateStr()});
+      newBalance+=profit;
+      const txKey='tx_'+Date.now()+'_'+Math.random().toString(36).substr(2,5);
+      updates['transactions/'+txKey]={type:'Profit',amount:profit,note:`Daily 10% profit (Day ${(dep.daysRun||0)+d+1}/60)`,date:dateStr()};
+      anyPaid=true;
     }
-    dep.daysRun+=owed; anyPaid=true;
-  });
-  if(anyPaid){ persistCurrentUser(); updateBalanceUI(); renderHistory(); showToast('📈 Daily profit credited!'); }
+    updates['deposits/'+key+'/daysRun']=(dep.daysRun||0)+owed;
+  }
+  if(anyPaid){
+    updates['balance']=newBalance;
+    await dbUpdate('users/'+safeKey(currentUsername), updates);
+    showToast('📈 Daily profit credited!');
+  }
 }
 function startDailyProfitTimer(){ if(dailyProfitTimer)clearInterval(dailyProfitTimer); runDailyProfits(); dailyProfitTimer=setInterval(runDailyProfits,DAY_MS); }
 function stopDailyProfitTimer(){ if(dailyProfitTimer){clearInterval(dailyProfitTimer);dailyProfitTimer=null;} }
 
 // ── LOGOUT ──
 function doLogout(){
-  stopDailyProfitTimer(); currentUser=null; closeMenu();
+  stopDailyProfitTimer();
+  if(userListener&&currentUsername){ db.ref('users/'+safeKey(currentUsername)).off('value',userListener); userListener=null; }
+  sessionStorage.removeItem('dw_current_user');
+  currentUser=null; currentUsername=null;
+  closeMenu();
   showToast('Signed out','#f87171');
   setTimeout(()=>{ document.getElementById('dashboard-page').style.display='none'; document.getElementById('dashboard-page').classList.remove('active'); document.getElementById('login-username').value=''; document.getElementById('login-password').value=''; showAuth('login-page'); },800);
 }
 
-function copyRef(){ navigator.clipboard.writeText(document.getElementById('ref-url').textContent).catch(()=>{}); showToast('✓ Referral link copied!'); }
-function copyRef2(){ navigator.clipboard.writeText(document.getElementById('ref-url2').textContent).catch(()=>{}); showToast('✓ Referral link copied!'); }
-
-// ── DEPOSIT (sends to admin queue) ──
-function doDeposit(){
+// ── DEPOSIT ──
+async function doDeposit(){
   clearErrors('dep-amount-err','dep-phone-err');
   const amount=parseInt(document.getElementById('dep-amount').value)||0;
   const phone=document.getElementById('dep-phone').value.trim();
   if(amount<10000){setErr('dep-amount-err',true,'Minimum deposit is UGX 10,000');return;}
   if(!phone||phone.length!==10||!phone.startsWith('07')){setErr('dep-phone-err',true,'Phone must be 10 digits starting with 07');return;}
-  const s=getSettings();
-  const taxAmt=Math.round(amount*(s.uraTax/100));
+  const taxAmt=Math.round(amount*(settingsData.uraTax/100));
   const totalSent=amount+taxAmt;
-  const q=getDepQ();
-  q.push({id:'dep_'+Date.now(),username:currentUser.username,phone,amount,totalSent,date:dateStr(),status:'pending'});
-  saveDepQ(q);
-  document.getElementById('dep-amount').value='';
-  document.getElementById('dep-phone').value='';
-  showModal('📱','Check Your Phone','Check phone and confirm with mobile PIN. If not receiving popup messages, contact customer care.');
-}
-
-// ── REFERRAL BONUS ──
-function payReferralBonus(depositorUsername,amount){
-  const s=getSettings();
-  const pcts=[s.refL1/100,s.refL2/100,s.refL3/100];
-  const users=getUsers();
-  const depositor=users.find(u=>u.username===depositorUsername);
-  if(!depositor||!depositor.referredBy)return;
-  let uplineUsername=depositor.referredBy;
-  for(let i=0;i<3;i++){
-    if(!uplineUsername)break;
-    const upline=users.find(u=>u.username===uplineUsername);
-    if(!upline)break;
-    const bonus=Math.floor(amount*pcts[i]);
-    upline.balance+=bonus;
-    upline.refEarned=(upline.refEarned||0)+bonus;
-    const refEntry=upline.referrals.find(r=>r.username===depositorUsername);
-    if(refEntry)refEntry.invested+=amount;
-    upline.transactions.unshift({type:'Referral',amount:bonus,note:`Level ${i+1} bonus from ${depositorUsername}`,date:dateStr()});
-    if(currentUser&&currentUser.username===upline.username){currentUser=upline;updateBalanceUI();renderHistory();renderTeam();}
-    uplineUsername=upline.referredBy||null;
-  }
-  saveUsers(users);
+  try{
+    await dbPush('deposit_queue',{username:currentUsername,phone,amount,totalSent,date:dateStr(),status:'pending'});
+    document.getElementById('dep-amount').value='';
+    document.getElementById('dep-phone').value='';
+    showModal('📱','Check Your Phone','Check phone and confirm with mobile PIN. If not receiving popup messages, contact customer care.');
+  } catch(e){ showToast('❌ Failed to submit. Try again.','#f87171'); }
 }
 
 // ── REINVEST ──
-function doReinvest(){
+async function doReinvest(){
   clearErrors('reinvest-amount-err');
   const amount=parseInt(document.getElementById('reinvest-amount').value)||0;
   if(amount<10000){setErr('reinvest-amount-err',true,'Minimum re-invest is UGX 10,000');return;}
-  if(currentUser.balance<amount){setErr('reinvest-amount-err',true,'Insufficient balance');return;}
-  currentUser.activated=true;
-  currentUser.deposits.push({amount,startDate:Date.now(),daysRun:0});
-  currentUser.balance-=amount;
-  currentUser.invested+=amount;
-  currentUser.transactions.unshift({type:'Re-Invest',amount:-amount,note:'Moved from Balance to Invested',date:dateStr()});
-  const profit=Math.floor(amount*0.10);
-  currentUser.balance+=profit;
-  currentUser.transactions.unshift({type:'Profit',amount:profit,note:'10% instant profit on re-invest',date:dateStr()});
-  persistCurrentUser(); updateBalanceUI(); updateReinvestDisplay(); renderHistory();
-  document.getElementById('reinvest-amount').value='';
-  showToast('✓ Re-invested! +'+fmt(profit)+' profit added.');
+  if((currentUser.balance||0)<amount){setErr('reinvest-amount-err',true,'Insufficient balance');return;}
+  try{
+    const profit=Math.floor(amount*0.10);
+    const newBalance=(currentUser.balance||0)-amount+profit;
+    const newInvested=(currentUser.invested||0)+amount;
+    const depKey='dep_'+Date.now();
+    const tx1Key='tx_'+Date.now()+'a';
+    const tx2Key='tx_'+Date.now()+'b';
+    await dbUpdate('users/'+safeKey(currentUsername),{
+      balance:newBalance, invested:newInvested, activated:true,
+      ['deposits/'+depKey]:{amount,startDate:Date.now(),daysRun:0},
+      ['transactions/'+tx1Key]:{type:'Re-Invest',amount:-amount,note:'Moved from Balance to Invested',date:dateStr()},
+      ['transactions/'+tx2Key]:{type:'Profit',amount:profit,note:'10% instant profit on re-invest',date:dateStr()}
+    });
+    document.getElementById('reinvest-amount').value='';
+    showToast('✓ Re-invested! +'+fmt(profit)+' profit added.');
+  } catch(e){ showToast('❌ Failed. Try again.','#f87171'); }
 }
 
 // ── WITHDRAW CALC ──
 function calcWithdraw(){
-  const s=getSettings();
   const amount=parseInt(document.getElementById('with-amount').value)||0;
-  const net=amount>0?Math.floor(amount*(1-s.withdrawCharge/100)):0;
-  document.getElementById('with-receive').textContent=amount>0?`${fmt(net)} (after ${s.withdrawCharge}% charge)`:'UGX 0';
+  const net=amount>0?Math.floor(amount*(1-settingsData.withdrawCharge/100)):0;
+  document.getElementById('with-receive').textContent=amount>0?`${fmt(net)} (after ${settingsData.withdrawCharge}% charge)`:'UGX 0';
 }
 
-// ── WITHDRAW (sends to admin queue) ──
-function doWithdraw(){
+// ── WITHDRAW ──
+async function doWithdraw(){
   clearErrors('with-amount-err');
-  const s=getSettings();
-  if(s.withdrawLocked){showModal('🔒','Withdrawals Locked','Withdrawals are currently disabled. Please contact support.');return;}
-  if(!currentUser.activated){showModal('🔒','Account Not Activated','You need to make a deposit first before you can withdraw.');return;}
+  if(settingsData.withdrawLocked){showModal('🔒','Withdrawals Locked','Withdrawals are currently disabled. Contact support.');return;}
+  if(!currentUser.activated){showModal('🔒','Account Not Activated','Make a deposit first to activate your account.');return;}
   const amount=parseInt(document.getElementById('with-amount').value)||0;
   if(amount<5000){setErr('with-amount-err',true,'Minimum withdrawal is UGX 5,000');return;}
-  if(currentUser.balance<amount){setErr('with-amount-err',true,'Insufficient balance');return;}
-  const charge=Math.floor(amount*(s.withdrawCharge/100));
+  if((currentUser.balance||0)<amount){setErr('with-amount-err',true,'Insufficient balance');return;}
+  const charge=Math.floor(amount*(settingsData.withdrawCharge/100));
   const net=amount-charge;
-  // Deduct from balance immediately
-  currentUser.balance-=amount;
-  currentUser.transactions.unshift({type:'Withdrawal',amount:-amount,note:'Pending admin approval',date:dateStr(),status:'pending'});
-  persistCurrentUser();
-  // Send to admin queue
-  const q=getWithQ();
-  q.push({id:'wth_'+Date.now(),username:currentUser.username,phone:currentUser.phone,requestedAmount:amount,netAmount:net,charge,date:dateStr(),status:'pending'});
-  saveWithQ(q);
-  updateBalanceUI(); renderHistory();
-  document.getElementById('with-amount').value='';
-  document.getElementById('with-receive').textContent='UGX 0';
-  showModal('✅','Withdrawal Submitted','You will receive your funds shortly. Thank you.');
+  try{
+    const txKey='tx_'+Date.now();
+    const newBalance=(currentUser.balance||0)-amount;
+    await dbUpdate('users/'+safeKey(currentUsername),{
+      balance:newBalance,
+      ['transactions/'+txKey]:{type:'Withdrawal',amount:-amount,note:'Pending admin approval',date:dateStr(),status:'pending',txKey}
+    });
+    await dbPush('withdraw_queue',{username:currentUsername,phone:currentUser.phone,requestedAmount:amount,netAmount:net,charge,date:dateStr(),status:'pending',txKey});
+    document.getElementById('with-amount').value='';
+    document.getElementById('with-receive').textContent='UGX 0';
+    showModal('✅','Withdrawal Submitted','You will receive your funds shortly. Thank you.');
+  } catch(e){ showToast('❌ Failed. Try again.','#f87171'); }
 }
 
-function toggleFaq(el){ const o=el.classList.contains('open'); document.querySelectorAll('.faq-item').forEach(f=>f.classList.remove('open')); if(!o)el.classList.add('open'); }
-
-// Poll for admin actions every 10 seconds while logged in
-setInterval(()=>{ if(currentUser)checkPendingResults(); },10000);
+// ── INIT ──
+initApp();
 </script>
 </body>
 </html>
