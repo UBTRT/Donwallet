@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DON-WALLET Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#060d1a;--surface:#0f1923;--surface2:#162030;--surface3:#1e2d40;--border:rgba(56,189,248,0.1);--accent:#38bdf8;--accent2:#818cf8;--accent3:#34d399;--warn:#f87171;--gold:#fbbf24;--text:#e2e8f0;--muted:#64748b;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+  /* LOGIN */
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(ellipse 60% 50% at 50% 0%,rgba(56,189,248,0.08),transparent);}
+  .login-box{background:var(--surface);border:1px solid rgba(56,189,248,.2);border-radius:24px;padding:40px 32px;width:100%;max-width:400px;box-shadow:0 0 60px rgba(56,189,248,.1);}
+  .login-logo{text-align:center;margin-bottom:28px;}
+  .login-logo-icon{width:64px;height:64px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:16px;display:grid;place-items:center;font-size:28px;margin:0 auto 12px;}
+  .login-title{font-size:22px;font-weight:800;background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .login-sub{font-size:12px;color:var(--muted);margin-top:4px;}
+  .f-group{margin-bottom:16px;}
+  .f-label{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block;}
+  .f-wrap{position:relative;}
+  .f-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none;}
+  .f-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:13px 14px 13px 42px;font-family:'Syne',sans-serif;font-size:14px;color:var(--text);outline:none;transition:.2s;}
+  .f-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(56,189,248,.1);}
+  .f-err{font-size:11px;color:var(--warn);margin-top:5px;display:none;}
+  .f-err.show{display:block;}
+  .login-btn{width:100%;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:14px;padding:15px;font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#fff;cursor:pointer;transition:.2s;margin-top:4px;}
+  .login-btn:active{transform:scale(.98);}
+  /* LAYOUT */
+  .admin-wrap{display:none;min-height:100vh;}
+  .admin-wrap.active{display:flex;}
+  .sidebar{width:240px;background:var(--surface);border-right:1px solid var(--border);min-height:100vh;display:flex;flex-direction:column;position:fixed;left:0;top:0;z-index:100;}
+  .sidebar-brand{padding:24px 20px 18px;border-bottom:1px solid var(--border);}
+  .sidebar-brand-name{font-size:18px;font-weight:800;background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .sidebar-sub{font-size:10px;color:var(--muted);margin-top:2px;}
+  .sidebar-nav{flex:1;padding:16px 12px;overflow-y:auto;}
+  .nav-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;cursor:pointer;transition:.2s;margin-bottom:4px;font-size:13px;font-weight:600;color:var(--muted);}
+  .nav-item:hover{background:var(--surface2);color:var(--text);}
+  .nav-item.active{background:rgba(56,189,248,.1);color:var(--accent);}
+  .nav-icon{font-size:18px;width:24px;text-align:center;}
+  .nav-badge{margin-left:auto;background:var(--warn);color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;min-width:20px;text-align:center;}
+  .sidebar-footer{padding:16px 12px;border-top:1px solid var(--border);}
+  .logout-btn{width:100%;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.25);border-radius:12px;padding:11px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--warn);cursor:pointer;transition:.2s;}
+  .logout-btn:active{transform:scale(.98);}
+  .main-content{margin-left:240px;flex:1;padding:28px;min-height:100vh;}
+  .page{display:none;}
+  .page.active{display:block;}
+  .page-title{font-size:22px;font-weight:800;margin-bottom:4px;}
+  .page-sub{font-size:13px;color:var(--muted);margin-bottom:24px;}
+  /* CARDS */
+  .stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:28px;}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px 16px;}
+  .stat-card-label{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px;}
+  .stat-card-val{font-size:18px;font-weight:800;font-family:'Space Mono',monospace;}
+  .stat-card-val.blue{color:var(--accent)}.stat-card-val.green{color:var(--accent3)}.stat-card-val.gold{color:var(--gold)}.stat-card-val.red{color:var(--warn)}.stat-card-val.purple{color:var(--accent2)}
+  /* TABLE */
+  .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:20px;}
+  .table-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+  .table-title{font-size:14px;font-weight:800;}
+  table{width:100%;border-collapse:collapse;}
+  thead tr{background:rgba(56,189,248,.05);}
+  thead th{padding:12px 16px;font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);text-align:left;border-bottom:1px solid var(--border);}
+  tbody tr{border-bottom:1px solid var(--border);transition:background .15s;}
+  tbody tr:last-child{border-bottom:none;}
+  tbody tr:hover{background:var(--surface2);}
+  tbody td{padding:13px 16px;font-size:13px;}
+  .mono{font-family:'Space Mono',monospace;font-size:12px;}
+  /* BADGES */
+  .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;}
+  .badge-pending{background:rgba(251,191,36,.15);color:var(--gold);}
+  .badge-approved{background:rgba(52,211,153,.15);color:var(--accent3);}
+  .badge-rejected{background:rgba(248,113,113,.15);color:var(--warn);}
+  .badge-locked{background:rgba(248,113,113,.15);color:var(--warn);}
+  .badge-active{background:rgba(52,211,153,.15);color:var(--accent3);}
+  /* BUTTONS */
+  .btn{border:none;border-radius:8px;padding:7px 14px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:.2s;}
+  .btn:active{transform:scale(.97);}
+  .btn-approve{background:rgba(52,211,153,.2);color:var(--accent3);border:1px solid rgba(52,211,153,.3);}
+  .btn-approve:hover{background:rgba(52,211,153,.35);}
+  .btn-reject{background:rgba(248,113,113,.2);color:var(--warn);border:1px solid rgba(248,113,113,.3);}
+  .btn-reject:hover{background:rgba(248,113,113,.35);}
+  .btn-edit{background:rgba(56,189,248,.15);color:var(--accent);border:1px solid rgba(56,189,248,.25);}
+  .btn-edit:hover{background:rgba(56,189,248,.3);}
+  .btn-delete{background:rgba(248,113,113,.15);color:var(--warn);border:1px solid rgba(248,113,113,.25);}
+  .btn-delete:hover{background:rgba(248,113,113,.3);}
+  .btn-save{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;padding:10px 24px;font-size:13px;}
+  .btn-danger{background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff;padding:10px 24px;font-size:13px;}
+  .btn-success{background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;padding:10px 24px;font-size:13px;}
+  /* SETTINGS */
+  .settings-section{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:20px;}
+  .settings-title{font-size:15px;font-weight:800;margin-bottom:4px;}
+  .settings-sub{font-size:12px;color:var(--muted);margin-bottom:20px;}
+  .settings-row{display:flex;align-items:center;gap:16px;margin-bottom:14px;}
+  .settings-label{font-size:12px;font-weight:700;color:var(--muted);min-width:180px;}
+  .settings-input{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-family:'Syne',sans-serif;font-size:13px;color:var(--text);outline:none;transition:.2s;flex:1;}
+  .settings-input:focus{border-color:var(--accent);}
+  .pct-group{display:flex;align-items:center;gap:8px;}
+  .pct-input{width:80px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-family:'Space Mono',monospace;font-size:13px;color:var(--text);outline:none;transition:.2s;text-align:center;}
+  .pct-input:focus{border-color:var(--accent);}
+  .pct-label{font-size:12px;color:var(--muted);}
+  .danger-zone{background:rgba(220,38,38,.05);border:1px solid rgba(220,38,38,.2);border-radius:16px;padding:24px;margin-bottom:20px;}
+  .danger-title{font-size:15px;font-weight:800;color:var(--warn);margin-bottom:4px;}
+  .danger-sub{font-size:12px;color:var(--muted);margin-bottom:20px;}
+  /* EDIT MODAL */
+  .modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;display:none;align-items:center;justify-content:center;padding:24px;}
+  .modal-ov.open{display:flex;}
+  .modal-box{background:var(--surface);border:1px solid rgba(56,189,248,.2);border-radius:20px;padding:28px;width:100%;max-width:440px;animation:cardUp .3s ease both;}
+  @keyframes cardUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+  .modal-title{font-size:17px;font-weight:800;margin-bottom:18px;}
+  .modal-row{margin-bottom:14px;}
+  .modal-label{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;display:block;}
+  .modal-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;font-family:'Syne',sans-serif;font-size:13px;color:var(--text);outline:none;transition:.2s;}
+  .modal-input:focus{border-color:var(--accent);}
+  .modal-actions{display:flex;gap:10px;margin-top:20px;justify-content:flex-end;}
+  .modal-cancel{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 20px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;}
+  /* TOAST */
+  .toast{position:fixed;top:24px;right:24px;background:var(--accent3);color:#0a0e1a;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;padding:12px 24px;border-radius:12px;opacity:0;transition:.3s;z-index:9999;pointer-events:none;transform:translateY(-10px);}
+  .toast.show{opacity:1;transform:translateY(0);}
+  /* EMPTY */
+  .empty-row td{text-align:center;padding:40px;color:var(--muted);font-size:13px;}
+  /* Tube page */
+  .tube-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;}
+  .tube-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;text-align:center;}
+  .tube-avatar{width:52px;height:52px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:50%;display:grid;place-items:center;font-size:22px;margin:0 auto 10px;}
+  .tube-name{font-size:14px;font-weight:800;margin-bottom:4px;}
+  .tube-amt{font-size:12px;font-family:'Space Mono',monospace;color:var(--accent3);}
+  /* Pct summary */
+  .pct-summary{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;}
+  .pct-pill{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;}
+  .pct-pill span{color:var(--accent);font-weight:800;}
+  @media(max-width:900px){
+    .sidebar{width:60px;}
+    .sidebar-brand,.sidebar-sub,.nav-item span:not(.nav-icon){display:none;}
+    .main-content{margin-left:60px;}
+    .stats-row{grid-template-columns:repeat(2,1fr);}
+  }
+</style>
+</head>
+<body>
+
+<!-- ADMIN LOGIN -->
+<div class="login-wrap" id="login-wrap">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-icon">⚙️</div>
+      <div class="login-title">DON-WALLET</div>
+      <div class="login-sub">Admin Control Panel</div>
+    </div>
+    <div class="f-group">
+      <label class="f-label">Username</label>
+      <div class="f-wrap"><span class="f-icon">👤</span><input type="text" class="f-input" id="a-user" placeholder="Admin username"></div>
+      <div class="f-err" id="a-user-err">Invalid credentials</div>
+    </div>
+    <div class="f-group">
+      <label class="f-label">Password</label>
+      <div class="f-wrap"><span class="f-icon">🔒</span><input type="password" class="f-input" id="a-pass" placeholder="Admin password"></div>
+    </div>
+    <div class="f-err" id="a-err" style="font-size:12px;text-align:center;margin-bottom:10px;"></div>
+    <button class="login-btn" onclick="adminLogin()">Sign In to Admin →</button>
+  </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div class="admin-wrap" id="admin-wrap">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-name">DON-WALLET</div>
+      <div class="sidebar-sub">Admin Panel</div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-item active" onclick="showPage('pg-dashboard')"><span class="nav-icon">📊</span><span>Dashboard</span></div>
+      <div class="nav-item" onclick="showPage('pg-deposits')"><span class="nav-icon">💳</span><span>Deposits</span><span class="nav-badge" id="dep-badge">0</span></div>
+      <div class="nav-item" onclick="showPage('pg-withdrawals')"><span class="nav-icon">💸</span><span>Withdrawals</span><span class="nav-badge" id="with-badge">0</span></div>
+      <div class="nav-item" onclick="showPage('pg-users')"><span class="nav-icon">👥</span><span>Users</span></div>
+      <div class="nav-item" onclick="showPage('pg-tube')"><span class="nav-icon">🎯</span><span>Tube</span></div>
+      <div class="nav-item" onclick="showPage('pg-settings')"><span class="nav-icon">⚙️</span><span>Settings</span></div>
+    </div>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="adminLogout()">🚪 Logout</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main-content">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="pg-dashboard">
+      <div class="page-title">Dashboard</div>
+      <div class="page-sub">Platform overview & statistics</div>
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-card-label">Total Users</div><div class="stat-card-val blue" id="d-total-users">0</div></div>
+        <div class="stat-card"><div class="stat-card-label">Total Invested</div><div class="stat-card-val gold" id="d-total-invested">UGX 0</div></div>
+        <div class="stat-card"><div class="stat-card-label">Total Balance</div><div class="stat-card-val green" id="d-total-balance">UGX 0</div></div>
+        <div class="stat-card"><div class="stat-card-label">Total Withdrawn</div><div class="stat-card-val red" id="d-total-withdrawn">UGX 0</div></div>
+        <div class="stat-card"><div class="stat-card-label">Total Earned</div><div class="stat-card-val purple" id="d-total-earned">UGX 0</div></div>
+      </div>
+      <div class="pct-summary" id="pct-summary"></div>
+      <div class="stats-row" style="grid-template-columns:repeat(3,1fr)">
+        <div class="stat-card"><div class="stat-card-label">Pending Deposits</div><div class="stat-card-val gold" id="d-pend-dep">0</div></div>
+        <div class="stat-card"><div class="stat-card-label">Pending Withdrawals</div><div class="stat-card-val gold" id="d-pend-with">0</div></div>
+        <div class="stat-card"><div class="stat-card-label">Locked Users</div><div class="stat-card-val red" id="d-locked">0</div></div>
+      </div>
+    </div>
+
+    <!-- DEPOSITS -->
+    <div class="page" id="pg-deposits">
+      <div class="page-title">Deposit Requests</div>
+      <div class="page-sub">Review and approve or reject incoming deposit requests</div>
+      <div class="table-wrap">
+        <div class="table-header"><div class="table-title">📥 Pending Deposits</div></div>
+        <table>
+          <thead><tr><th>Username</th><th>Phone</th><th>User Amount</th><th>Sent to Admin (+3.7% tax)</th><th>Date & Time</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="dep-table-body"><tr class="empty-row"><td colspan="7">No pending deposit requests</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- WITHDRAWALS -->
+    <div class="page" id="pg-withdrawals">
+      <div class="page-title">Withdrawal Requests</div>
+      <div class="page-sub">Review and process withdrawal requests</div>
+      <div class="table-wrap">
+        <div class="table-header"><div class="table-title">📤 Pending Withdrawals</div></div>
+        <table>
+          <thead><tr><th>Username</th><th>Phone</th><th>Requested</th><th>Net to Pay (after 10%)</th><th>Date & Time</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="with-table-body"><tr class="empty-row"><td colspan="7">No pending withdrawal requests</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- USERS -->
+    <div class="page" id="pg-users">
+      <div class="page-title">Users</div>
+      <div class="page-sub">Manage all registered users</div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">👥 All Users</div>
+          <input type="text" class="f-input" style="width:220px;padding:8px 14px;" placeholder="🔍 Search username..." oninput="renderUsersTable(this.value)">
+        </div>
+        <table>
+          <thead><tr><th>Username</th><th>Phone</th><th>Balance</th><th>Invested</th><th>Withdrawn</th><th>Referrals</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="users-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TUBE -->
+    <div class="page" id="pg-tube">
+      <div class="page-title">Tube</div>
+      <div class="page-sub">Active investors — users who have made deposits</div>
+      <div class="tube-grid" id="tube-grid"></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="page" id="pg-settings">
+      <div class="page-title">Settings</div>
+      <div class="page-sub">Configure platform settings and links</div>
+
+      <!-- WhatsApp Links -->
+      <div class="settings-section">
+        <div class="settings-title">💬 WhatsApp Links</div>
+        <div class="settings-sub">Set the WhatsApp group and support chat links shown to users</div>
+        <div class="settings-row">
+          <span class="settings-label">WhatsApp Group Link</span>
+          <input type="url" class="settings-input" id="wa-group-input" placeholder="https://chat.whatsapp.com/...">
+          <button class="btn btn-save" onclick="saveWaGroup()">Save</button>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">WhatsApp Support Link</span>
+          <input type="url" class="settings-input" id="wa-support-input" placeholder="https://wa.me/...">
+          <button class="btn btn-save" onclick="saveWaSupport()">Save</button>
+        </div>
+      </div>
+
+      <!-- Percentages -->
+      <div class="settings-section">
+        <div class="settings-title">📊 Percentage Settings</div>
+        <div class="settings-sub">Adjust tax, withdrawal charge and referral bonus percentages</div>
+        <div class="settings-row">
+          <span class="settings-label">URA Tax on Deposits</span>
+          <div class="pct-group"><input type="number" class="pct-input" id="ura-tax-input" min="0" max="50" step="0.1"><span class="pct-label">%</span></div>
+          <button class="btn btn-save" onclick="saveUraTax()">Save</button>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">Withdrawal Charge</span>
+          <div class="pct-group"><input type="number" class="pct-input" id="with-charge-input" min="0" max="50" step="0.1"><span class="pct-label">%</span></div>
+          <button class="btn btn-save" onclick="saveWithCharge()">Save</button>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">Referral Level 1 Bonus</span>
+          <div class="pct-group"><input type="number" class="pct-input" id="ref-l1-input" min="0" max="50" step="0.1"><span class="pct-label">%</span></div>
+          <button class="btn btn-save" onclick="saveRefPct()">Save</button>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">Referral Level 2 Bonus</span>
+          <div class="pct-group"><input type="number" class="pct-input" id="ref-l2-input" min="0" max="50" step="0.1"><span class="pct-label">%</span></div>
+          <button class="btn btn-save" onclick="saveRefPct()">Save</button>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">Referral Level 3 Bonus</span>
+          <div class="pct-group"><input type="number" class="pct-input" id="ref-l3-input" min="0" max="50" step="0.1"><span class="pct-label">%</span></div>
+          <button class="btn btn-save" onclick="saveRefPct()">Save</button>
+        </div>
+      </div>
+
+      <!-- Danger Zone -->
+      <div class="danger-zone">
+        <div class="danger-title">⚠️ Danger Zone</div>
+        <div class="danger-sub">Lock or unlock withdrawals for ALL users globally</div>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-danger" onclick="lockWithdrawals(true)">🔒 Lock All Withdrawals</button>
+          <button class="btn btn-success" onclick="lockWithdrawals(false)">🔓 Unlock All Withdrawals</button>
+          <span id="lock-status" style="font-size:13px;color:var(--muted);">Status: checking...</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- EDIT USER MODAL -->
+<div class="modal-ov" id="edit-modal">
+  <div class="modal-box">
+    <div class="modal-title">✏️ Edit User</div>
+    <input type="hidden" id="edit-username">
+    <div class="modal-row"><label class="modal-label">Password</label><input type="text" class="modal-input" id="edit-password" placeholder="New password"></div>
+    <div class="modal-row"><label class="modal-label">Balance (UGX)</label><input type="number" class="modal-input" id="edit-balance" min="0"></div>
+    <div class="modal-row"><label class="modal-label">Invested (UGX)</label><input type="number" class="modal-input" id="edit-invested" min="0"></div>
+    <div class="modal-row"><label class="modal-label">Referrals Count</label><input type="number" class="modal-input" id="edit-referrals" min="0"></div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeEditModal()">Cancel</button>
+      <button class="btn btn-save" onclick="saveEditUser()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── SHARED STORAGE ──
+const STORE_USERS   = 'dw_users';
+const STORE_DEP_Q   = 'dw_deposit_queue';
+const STORE_WITH_Q  = 'dw_withdraw_queue';
+const STORE_SETTINGS= 'dw_settings';
+
+function loadStore(key,def){ try{ return JSON.parse(localStorage.getItem(key))||def; }catch(e){ return def; } }
+function saveStore(key,val){ localStorage.setItem(key,JSON.stringify(val)); }
+function getUsers(){ return loadStore(STORE_USERS,[]); }
+function saveUsers(u){ saveStore(STORE_USERS,u); }
+function getDepQ(){ return loadStore(STORE_DEP_Q,[]); }
+function saveDepQ(q){ saveStore(STORE_DEP_Q,q); }
+function getWithQ(){ return loadStore(STORE_WITH_Q,[]); }
+function saveWithQ(q){ saveStore(STORE_WITH_Q,q); }
+function getSettings(){ return loadStore(STORE_SETTINGS,{uraTax:3.7,withdrawCharge:10,refL1:10,refL2:4,refL3:1,waGroup:'',waSupport:'',withdrawLocked:false}); }
+function saveSettings(s){ saveStore(STORE_SETTINGS,s); }
+
+function fmt(n){ return 'UGX '+Number(n||0).toLocaleString(); }
+function dateStr(){ const d=new Date(); return d.toLocaleDateString('en-UG',{day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-UG',{hour:'2-digit',minute:'2-digit'}); }
+
+// ── TOAST ──
+function toast(msg,color){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.style.background=color||'#34d399'; t.style.color=color?'#fff':'#0a0e1a';
+  t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// ── ADMIN LOGIN ──
+const ADMIN_USER='ZamZam1952';
+const ADMIN_PASS='SWWIPTRADE2024';
+
+function adminLogin(){
+  const u=document.getElementById('a-user').value.trim();
+  const p=document.getElementById('a-pass').value;
+  document.getElementById('a-err').classList.remove('show');
+  if(u===ADMIN_USER&&p===ADMIN_PASS){
+    document.getElementById('login-wrap').style.display='none';
+    document.getElementById('admin-wrap').classList.add('active');
+    loadAllPages();
+    startAutoRefresh();
+  } else {
+    const e=document.getElementById('a-err');
+    e.textContent='❌ Invalid admin credentials';
+    e.classList.add('show');
+  }
+}
+
+function adminLogout(){
+  document.getElementById('admin-wrap').classList.remove('active');
+  document.getElementById('login-wrap').style.display='flex';
+  document.getElementById('a-user').value='';
+  document.getElementById('a-pass').value='';
+}
+
+// ── PAGE NAVIGATION ──
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const map={'pg-dashboard':0,'pg-deposits':1,'pg-withdrawals':2,'pg-users':3,'pg-tube':4,'pg-settings':5};
+  const items=document.querySelectorAll('.nav-item');
+  if(map[id]!==undefined)items[map[id]].classList.add('active');
+  loadPage(id);
+}
+
+function loadPage(id){
+  if(id==='pg-dashboard')renderDashboard();
+  else if(id==='pg-deposits')renderDeposits();
+  else if(id==='pg-withdrawals')renderWithdrawals();
+  else if(id==='pg-users')renderUsersTable();
+  else if(id==='pg-tube')renderTube();
+  else if(id==='pg-settings')loadSettings();
+}
+
+function loadAllPages(){ renderDashboard(); renderDeposits(); renderWithdrawals(); renderUsersTable(); renderTube(); loadSettings(); updateBadges(); }
+
+// ── BADGES ──
+function updateBadges(){
+  const depPending=getDepQ().filter(r=>r.status==='pending').length;
+  const withPending=getWithQ().filter(r=>r.status==='pending').length;
+  document.getElementById('dep-badge').textContent=depPending;
+  document.getElementById('with-badge').textContent=withPending;
+  document.getElementById('dep-badge').style.display=depPending?'inline':'none';
+  document.getElementById('with-badge').style.display=withPending?'inline':'none';
+}
+
+// ── DASHBOARD ──
+function renderDashboard(){
+  const users=getUsers();
+  const total={users:users.length,invested:0,balance:0,withdrawn:0,earned:0};
+  users.forEach(u=>{ total.invested+=u.invested||0; total.balance+=u.balance||0; total.withdrawn+=u.withdrawn||0; total.earned+=(u.refEarned||0); });
+  document.getElementById('d-total-users').textContent=total.users;
+  document.getElementById('d-total-invested').textContent=fmt(total.invested);
+  document.getElementById('d-total-balance').textContent=fmt(total.balance);
+  document.getElementById('d-total-withdrawn').textContent=fmt(total.withdrawn);
+  document.getElementById('d-total-earned').textContent=fmt(total.earned);
+  document.getElementById('d-pend-dep').textContent=getDepQ().filter(r=>r.status==='pending').length;
+  document.getElementById('d-pend-with').textContent=getWithQ().filter(r=>r.status==='pending').length;
+  document.getElementById('d-locked').textContent=users.filter(u=>u.locked).length;
+  const s=getSettings();
+  document.getElementById('pct-summary').innerHTML=
+    `<div class="pct-pill">URA Tax <span>${s.uraTax}%</span></div>
+     <div class="pct-pill">Withdrawal Charge <span>${s.withdrawCharge}%</span></div>
+     <div class="pct-pill">Ref L1 <span>${s.refL1}%</span></div>
+     <div class="pct-pill">Ref L2 <span>${s.refL2}%</span></div>
+     <div class="pct-pill">Ref L3 <span>${s.refL3}%</span></div>
+     <div class="pct-pill">Withdrawals <span style="color:${s.withdrawLocked?'var(--warn)':'var(--accent3)'};">${s.withdrawLocked?'LOCKED':'OPEN'}</span></div>`;
+}
+
+// ── DEPOSITS ──
+function renderDeposits(){
+  const q=getDepQ();
+  const pending=q.filter(r=>r.status==='pending');
+  const tbody=document.getElementById('dep-table-body');
+  updateBadges();
+  if(!pending.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="7">No pending deposit requests</td></tr>'; return; }
+  tbody.innerHTML=pending.map(r=>`
+    <tr>
+      <td><strong>${r.username}</strong></td>
+      <td class="mono">${r.phone}</td>
+      <td class="mono">${fmt(r.amount)}</td>
+      <td class="mono" style="color:var(--gold)">${fmt(r.totalSent)}</td>
+      <td class="mono" style="font-size:11px">${r.date}</td>
+      <td><span class="badge badge-pending">Pending</span></td>
+      <td style="display:flex;gap:8px">
+        <button class="btn btn-approve" onclick="approveDeposit('${r.id}')">✅ Approve</button>
+        <button class="btn btn-reject" onclick="rejectDeposit('${r.id}')">❌ Reject</button>
+      </td>
+    </tr>`).join('');
+}
+
+function approveDeposit(id){
+  const q=getDepQ();
+  const req=q.find(r=>r.id===id); if(!req)return;
+  req.status='approved';
+  saveDepQ(q);
+  // Credit user
+  const users=getUsers();
+  const u=users.find(u=>u.username===req.username); if(!u)return;
+  u.activated=true;
+  u.invested+=req.amount;
+  u.deposits=u.deposits||[];
+  u.deposits.push({amount:req.amount,startDate:Date.now(),daysRun:0});
+  // Instant 10% profit
+  const profit=Math.floor(req.amount*0.10);
+  u.balance+=profit;
+  u.transactions=u.transactions||[];
+  u.transactions.unshift({type:'Deposit',amount:req.amount,note:'Mobile Money — Approved',date:dateStr()});
+  u.transactions.unshift({type:'Profit',amount:profit,note:'10% instant profit on deposit',date:dateStr()});
+  // Pay referral bonuses
+  payReferralBonusAdmin(req.username,req.amount,users);
+  saveUsers(users);
+  toast('✅ Deposit approved for '+req.username);
+  renderDeposits(); renderDashboard(); renderUsersTable(); updateBadges();
+}
+
+function rejectDeposit(id){
+  const q=getDepQ();
+  const req=q.find(r=>r.id===id); if(!req)return;
+  req.status='rejected';
+  saveDepQ(q);
+  // No changes to user — no history created
+  toast('❌ Deposit rejected for '+req.username,'#f87171');
+  renderDeposits(); updateBadges();
+}
+
+function payReferralBonusAdmin(depositorUsername,amount,users){
+  const s=getSettings();
+  const pcts=[s.refL1/100,s.refL2/100,s.refL3/100];
+  const depositor=users.find(u=>u.username===depositorUsername);
+  if(!depositor||!depositor.referredBy)return;
+  let uplineUsername=depositor.referredBy;
+  for(let i=0;i<3;i++){
+    if(!uplineUsername)break;
+    const upline=users.find(u=>u.username===uplineUsername);
+    if(!upline)break;
+    const bonus=Math.floor(amount*pcts[i]);
+    upline.balance+=bonus;
+    upline.refEarned=(upline.refEarned||0)+bonus;
+    const refEntry=(upline.referrals||[]).find(r=>r.username===depositorUsername);
+    if(refEntry)refEntry.invested+=amount;
+    upline.transactions=upline.transactions||[];
+    upline.transactions.unshift({type:'Referral',amount:bonus,note:`Level ${i+1} bonus from ${depositorUsername}`,date:dateStr()});
+    uplineUsername=upline.referredBy||null;
+  }
+}
+
+// ── WITHDRAWALS ──
+function renderWithdrawals(){
+  const q=getWithQ();
+  const pending=q.filter(r=>r.status==='pending');
+  const tbody=document.getElementById('with-table-body');
+  updateBadges();
+  if(!pending.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="7">No pending withdrawal requests</td></tr>'; return; }
+  tbody.innerHTML=pending.map(r=>`
+    <tr>
+      <td><strong>${r.username}</strong></td>
+      <td class="mono">${r.phone}</td>
+      <td class="mono">${fmt(r.requestedAmount)}</td>
+      <td class="mono" style="color:var(--accent3)">${fmt(r.netAmount)}</td>
+      <td class="mono" style="font-size:11px">${r.date}</td>
+      <td><span class="badge badge-pending">Pending</span></td>
+      <td style="display:flex;gap:8px">
+        <button class="btn btn-approve" onclick="approveWithdraw('${r.id}')">✅ Approve</button>
+        <button class="btn btn-reject" onclick="rejectWithdraw('${r.id}')">❌ Reject</button>
+      </td>
+    </tr>`).join('');
+}
+
+function approveWithdraw(id){
+  const q=getWithQ();
+  const req=q.find(r=>r.id===id); if(!req)return;
+  req.status='approved';
+  saveWithQ(q);
+  const users=getUsers();
+  const u=users.find(u=>u.username===req.username); if(!u)return;
+  // Mark withdrawal as successful in user transactions
+  const tx=u.transactions.find(t=>t.status==='pending'&&t.type==='Withdrawal');
+  if(tx){ tx.status='approved'; tx.note=`Withdrawal Successful — ${fmt(req.netAmount)} sent to ${req.phone}`; }
+  u.withdrawn=(u.withdrawn||0)+req.netAmount;
+  saveUsers(users);
+  toast('✅ Withdrawal approved for '+req.username);
+  renderWithdrawals(); renderDashboard(); renderUsersTable(); updateBadges();
+}
+
+function rejectWithdraw(id){
+  const q=getWithQ();
+  const req=q.find(r=>r.id===id); if(!req)return;
+  req.status='rejected';
+  saveWithQ(q);
+  const users=getUsers();
+  const u=users.find(u=>u.username===req.username); if(!u)return;
+  // Return full amount to balance
+  u.balance+=req.requestedAmount;
+  const tx=u.transactions.find(t=>t.status==='pending'&&t.type==='Withdrawal');
+  if(tx){ tx.status='rejected'; tx.note='Withdrawal Failed — amount returned to balance'; tx.amount=req.requestedAmount; }
+  u.transactions.unshift({type:'Bonus',amount:req.requestedAmount,note:'Withdrawal rejected — refunded',date:dateStr()});
+  saveUsers(users);
+  toast('❌ Withdrawal rejected, funds returned to '+req.username,'#f87171');
+  renderWithdrawals(); renderDashboard(); renderUsersTable(); updateBadges();
+}
+
+// ── USERS TABLE ──
+function renderUsersTable(search=''){
+  const users=getUsers();
+  const tbody=document.getElementById('users-table-body');
+  const filtered=search?users.filter(u=>u.username.toLowerCase().includes(search.toLowerCase())):users;
+  if(!filtered.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="8">No users found</td></tr>'; return; }
+  tbody.innerHTML=filtered.map(u=>`
+    <tr>
+      <td><strong>${u.username}</strong></td>
+      <td class="mono">${u.phone}</td>
+      <td class="mono" style="color:var(--accent3)">${fmt(u.balance)}</td>
+      <td class="mono" style="color:var(--gold)">${fmt(u.invested)}</td>
+      <td class="mono" style="color:var(--warn)">${fmt(u.withdrawn)}</td>
+      <td class="mono">${(u.referrals||[]).length}</td>
+      <td><span class="badge ${u.locked?'badge-locked':'badge-active'}">${u.locked?'Locked':'Active'}</span></td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn btn-edit" onclick="openEditModal('${u.username}')">✏️ Edit</button>
+        <button class="btn btn-${u.locked?'approve':'reject'}" onclick="toggleLock('${u.username}')">${u.locked?'🔓 Unlock':'🔒 Lock'}</button>
+        <button class="btn btn-delete" onclick="deleteUser('${u.username}')">🗑️ Delete</button>
+      </td>
+    </tr>`).join('');
+}
+
+function openEditModal(username){
+  const users=getUsers();
+  const u=users.find(u=>u.username===username); if(!u)return;
+  document.getElementById('edit-username').value=username;
+  document.getElementById('edit-password').value=u.password;
+  document.getElementById('edit-balance').value=u.balance||0;
+  document.getElementById('edit-invested').value=u.invested||0;
+  document.getElementById('edit-referrals').value=(u.referrals||[]).length;
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+function closeEditModal(){ document.getElementById('edit-modal').classList.remove('open'); }
+
+function saveEditUser(){
+  const username=document.getElementById('edit-username').value;
+  const users=getUsers();
+  const u=users.find(u=>u.username===username); if(!u)return;
+  u.password=document.getElementById('edit-password').value||u.password;
+  u.balance=parseInt(document.getElementById('edit-balance').value)||0;
+  u.invested=parseInt(document.getElementById('edit-invested').value)||0;
+  saveUsers(users);
+  closeEditModal();
+  toast('✅ User '+username+' updated');
+  renderUsersTable(); renderDashboard();
+}
+
+function toggleLock(username){
+  const users=getUsers();
+  const u=users.find(u=>u.username===username); if(!u)return;
+  u.locked=!u.locked;
+  saveUsers(users);
+  toast(u.locked?'🔒 User locked':'🔓 User unlocked', u.locked?'#f87171':undefined);
+  renderUsersTable(); renderDashboard();
+}
+
+function deleteUser(username){
+  if(!confirm(`Delete user "${username}"? This cannot be undone.`))return;
+  const users=getUsers().filter(u=>u.username!==username);
+  saveUsers(users);
+  toast('🗑️ User '+username+' deleted','#f87171');
+  renderUsersTable(); renderDashboard();
+}
+
+// ── TUBE ──
+function renderTube(){
+  const users=getUsers().filter(u=>(u.invested||0)>0);
+  const grid=document.getElementById('tube-grid');
+  if(!users.length){ grid.innerHTML='<div style="color:var(--muted);font-size:13px;padding:20px">No investors yet.</div>'; return; }
+  grid.innerHTML=users.map(u=>`
+    <div class="tube-card">
+      <div class="tube-avatar">👤</div>
+      <div class="tube-name">${u.username}</div>
+      <div class="tube-amt">${fmt(u.invested)} invested</div>
+    </div>`).join('');
+}
+
+// ── SETTINGS ──
+function loadSettings(){
+  const s=getSettings();
+  document.getElementById('wa-group-input').value=s.waGroup||'';
+  document.getElementById('wa-support-input').value=s.waSupport||'';
+  document.getElementById('ura-tax-input').value=s.uraTax;
+  document.getElementById('with-charge-input').value=s.withdrawCharge;
+  document.getElementById('ref-l1-input').value=s.refL1;
+  document.getElementById('ref-l2-input').value=s.refL2;
+  document.getElementById('ref-l3-input').value=s.refL3;
+  document.getElementById('lock-status').textContent='Status: Withdrawals are '+(s.withdrawLocked?'🔒 LOCKED':'🔓 OPEN');
+  document.getElementById('lock-status').style.color=s.withdrawLocked?'var(--warn)':'var(--accent3)';
+}
+
+function saveWaGroup(){ const s=getSettings(); s.waGroup=document.getElementById('wa-group-input').value.trim(); saveSettings(s); toast('✅ WhatsApp Group link saved'); }
+function saveWaSupport(){ const s=getSettings(); s.waSupport=document.getElementById('wa-support-input').value.trim(); saveSettings(s); toast('✅ WhatsApp Support link saved'); }
+function saveUraTax(){ const s=getSettings(); s.uraTax=parseFloat(document.getElementById('ura-tax-input').value)||3.7; saveSettings(s); toast('✅ URA Tax updated to '+s.uraTax+'%'); renderDashboard(); }
+function saveWithCharge(){ const s=getSettings(); s.withdrawCharge=parseFloat(document.getElementById('with-charge-input').value)||10; saveSettings(s); toast('✅ Withdrawal charge updated to '+s.withdrawCharge+'%'); renderDashboard(); }
+function saveRefPct(){ const s=getSettings(); s.refL1=parseFloat(document.getElementById('ref-l1-input').value)||10; s.refL2=parseFloat(document.getElementById('ref-l2-input').value)||4; s.refL3=parseFloat(document.getElementById('ref-l3-input').value)||1; saveSettings(s); toast('✅ Referral percentages updated'); renderDashboard(); }
+function lockWithdrawals(lock){ const s=getSettings(); s.withdrawLocked=lock; saveSettings(s); loadSettings(); toast(lock?'🔒 Withdrawals LOCKED for all users':'🔓 Withdrawals UNLOCKED','#f87171'); renderDashboard(); }
+
+// ── AUTO REFRESH ──
+function startAutoRefresh(){ setInterval(()=>{ updateBadges(); const active=document.querySelector('.page.active'); if(active)loadPage(active.id); },8000); }
+
+// Enter key on login
+document.addEventListener('keydown',e=>{ if(e.key==='Enter'){ const lw=document.getElementById('login-wrap'); if(lw.style.display!=='none'&&lw.style.display!=='')adminLogin(); else if(lw.style.display==='')adminLogin(); } });
+</script>
+</body>
+</html>
