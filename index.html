@@ -211,6 +211,15 @@
   .faq-item.open .faq-a{display:block;}
   .locked-banner{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);border-radius:12px;padding:12px 16px;font-size:12px;color:var(--warn);text-align:center;margin-bottom:12px;font-weight:700;}
   .loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:16px;}
+
+  /* FIX 1: SOCIAL PROOF */
+  .proof-wrap{padding:0 16px 10px;position:relative;z-index:1;}
+  .proof-card{background:#16a34a;border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:10px;box-shadow:0 4px 18px rgba(22,163,74,.45);opacity:0;transition:opacity .5s ease,transform .5s ease;transform:translateY(6px);}
+  .proof-card.visible{opacity:1;transform:translateY(0);}
+  .proof-card.hiding{opacity:0;transform:translateY(-4px);}
+  .proof-av{width:26px;height:26px;background:rgba(255,255,255,.2);border-radius:50%;display:grid;place-items:center;font-size:13px;flex-shrink:0;}
+  .proof-name-el{font-size:10px;font-weight:800;color:#fff;}
+  .proof-msg-el{font-size:9px;color:rgba(255,255,255,.88);line-height:1.3;}
   .loading-spinner{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg)}}
   .loading-text{font-size:14px;color:var(--muted);}
@@ -352,6 +361,7 @@
       </div>
     </div>
     <div class="section"><button class="wa-btn" onclick="openWaGroup()"><span style="font-size:20px">💬</span>Join Community Group</button></div>
+    <div class="proof-wrap"><div class="proof-card" id="proof-card"><div class="proof-av" id="proof-av">👤</div><div><div class="proof-name-el" id="proof-name">Musa</div><div class="proof-msg-el" id="proof-msg">invested UGX 50,000 🚀</div></div></div></div>
   </div>
   <!-- HISTORY -->
   <div class="dash-section" id="sec-history">
@@ -495,7 +505,7 @@
     <div class="section">
       <div class="support-card">
         <div class="support-item" onclick="openWaSupport()"><span class="support-icon">💬</span><div><div class="support-label">WhatsApp Support</div><div class="support-sub">Chat with our support team</div></div><span class="support-arrow">›</span></div>
-        <div class="support-item"><span class="support-icon">📧</span><div><div class="support-label">Email Support</div><div class="support-sub">support@don-wallet.app</div></div><span class="support-arrow">›</span></div>
+        <div class="support-item"><span class="support-icon">📧</span><div><div class="support-label">Email Support</div><div class="support-sub"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="5b282e2b2b34292f1b3f3435762c3a37373e2f753a2b2b">[email&#160;protected]</a></div></div><span class="support-arrow">›</span></div>
         <div class="support-item"><span class="support-icon">📞</span><div><div class="support-label">Call Us</div><div class="support-sub">Available 8AM – 8PM</div></div><span class="support-arrow">›</span></div>
       </div>
     </div>
@@ -551,7 +561,7 @@
 </div>
 <div class="toast" id="toast">✓ Done!</div>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ── FIREBASE INIT ──
 const firebaseConfig = {
   apiKey: "AIzaSyAsW9rbAx4rJ_MjZF4sLzWoID11Ui6aaCs",
@@ -587,7 +597,7 @@ function dateStr(){ const d=new Date(); return d.toLocaleDateString('en-UG',{day
 function safeKey(username){ return username.replace(/[.#$\[\]]/g,'_'); }
 
 // ── UI HELPERS ──
-function showAuth(id){ document.querySelectorAll('.auth-page').forEach(p=>{p.classList.remove('active');p.style.display='none';}); const t=document.getElementById(id); t.style.display='flex'; t.classList.add('active'); }
+function showAuth(id){ document.querySelectorAll('.auth-page').forEach(p=>{p.classList.remove('active');p.style.display='none';}); const t=document.getElementById(id); t.style.display='flex'; t.classList.add('active'); if(id==='register-page'){ const pr=sessionStorage.getItem('dw_pending_ref'); const ri=document.getElementById('reg-ref'); if(pr&&ri&&!ri.value) ri.value=pr; } }
 function showDashboard(){ document.querySelectorAll('.auth-page').forEach(p=>{p.classList.remove('active');p.style.display='none';}); document.getElementById('dashboard-page').style.display='block'; document.getElementById('dashboard-page').classList.add('active'); }
 function hideLoading(){ document.getElementById('loading-screen').style.display='none'; }
 function switchTab(tab){ Object.values(tabMap).forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('active');}); const t=document.getElementById(tabMap[tab]); if(t)t.classList.add('active'); document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active')); const idx=navOrder.indexOf(tab); if(idx>=0)document.querySelectorAll('.nav-item')[idx].classList.add('active'); document.querySelectorAll('.menu-item').forEach(m=>m.classList.remove('active-menu')); closeMenu(); }
@@ -710,6 +720,7 @@ async function doLogin(){
     loadDashboard(); showDashboard(); switchTab('home');
     startUserListener(username);
     startDailyProfitTimer();
+    startProofEngine();
     showToast('✓ Welcome back, '+username+'!');
   } catch(e){ setErr('login-general-err',true,'❌ Connection error. Try again.'); }
 }
@@ -718,8 +729,8 @@ function loadDashboard(){
   const u=currentUser;
   const ctry=u.country==='KE'?'🇰🇪 Kenya':'🇺🇬 Uganda';
   document.getElementById('dash-username').textContent=u.username;
-  document.getElementById('ref-url').textContent=`https://don-wallet.app/?ref=${u.username}`;
-  document.getElementById('ref-url2').textContent=`https://don-wallet.app/?ref=${u.username}`;
+  const siteBase=window.location.origin+window.location.pathname.replace(/\/[^\/]*$/,'/'); document.getElementById('ref-url').textContent=siteBase+'?ref='+encodeURIComponent(u.username);
+  document.getElementById('ref-url2').textContent=siteBase+'?ref='+encodeURIComponent(u.username);
   document.getElementById('profile-name').textContent=u.username;
   document.getElementById('profile-user').textContent=u.username;
   document.getElementById('profile-phone').textContent=u.phone;
@@ -784,41 +795,60 @@ async function doRegister(){
   } catch(e){ setErr('reg-general-err',true,'❌ Registration failed. Try again.'); console.error(e); }
 }
 
-// ── DAILY PROFIT ──
-const DAY_MS=86400000;
+// ── FIX 2: DATE-BASED DAILY PROFIT ──
+function getDateKey(d){ return d.toISOString().slice(0,10); }
+function addDays(d,n){ const r=new Date(d); r.setUTCDate(r.getUTCDate()+n); return r; }
+
 async function runDailyProfits(){
   if(!currentUser||!currentUsername)return;
-  const now=Date.now();
   const deposits=currentUser.deposits?Object.entries(currentUser.deposits):[];
-  let anyPaid=false;
+  if(!deposits.length)return;
+  const todayKey=getDateKey(new Date());
   const updates={};
   let newBalance=currentUser.balance||0;
+  let anyPaid=false;
+
   for(const [key,dep] of deposits){
-    if((dep.daysRun||0)>=60)continue;
-    const daysSince=Math.floor((now-dep.startDate)/DAY_MS);
-    const owed=Math.min(daysSince,60)-(dep.daysRun||0);
-    if(owed<=0)continue;
-    for(let d=0;d<owed;d++){
+    let daysRun=dep.daysRun||0;
+    if(daysRun>=60)continue;
+    // last paid date: either stored or the deposit start date
+    const startDate=new Date(dep.startDate);
+    const lastPaid=dep.lastPaidDate||getDateKey(startDate);
+    // next day to pay = day after lastPaid
+    let cursor=addDays(new Date(lastPaid),1);
+    while(getDateKey(cursor)<=todayKey && daysRun<60){
+      const dateKey=getDateKey(cursor);
       const profit=Math.floor(dep.amount*0.10);
       newBalance+=profit;
-      const txKey='tx_'+Date.now()+'_'+Math.random().toString(36).substr(2,5);
-      updates['transactions/'+txKey]={type:'Profit',amount:profit,note:`Daily 10% profit (Day ${(dep.daysRun||0)+d+1}/60)`,date:dateStr()};
+      const txKey='txp_'+dateKey.replace(/-/g,'')+'_'+key.slice(-5);
+      updates['transactions/'+txKey]={
+        type:'Profit',
+        amount:profit,
+        note:'Daily 10% profit — Day '+(daysRun+1)+'/60',
+        date:dateKey+' 00:00'
+      };
+      daysRun++;
       anyPaid=true;
+      cursor=addDays(cursor,1);
     }
-    updates['deposits/'+key+'/daysRun']=(dep.daysRun||0)+owed;
+    if(daysRun>(dep.daysRun||0)){
+      updates['deposits/'+key+'/daysRun']=daysRun;
+      updates['deposits/'+key+'/lastPaidDate']=getDateKey(addDays(cursor,-1));
+    }
   }
   if(anyPaid){
     updates['balance']=newBalance;
-    await dbUpdate('users/'+safeKey(currentUsername), updates);
-    showToast('📈 Daily profit credited!');
+    await dbUpdate('users/'+safeKey(currentUsername),updates);
+    // silent — no toast, user just sees balance and history update
   }
 }
-function startDailyProfitTimer(){ if(dailyProfitTimer)clearInterval(dailyProfitTimer); runDailyProfits(); dailyProfitTimer=setInterval(runDailyProfits,DAY_MS); }
-function stopDailyProfitTimer(){ if(dailyProfitTimer){clearInterval(dailyProfitTimer);dailyProfitTimer=null;} }
+function startDailyProfitTimer(){ runDailyProfits(); }
+function stopDailyProfitTimer(){}
 
 // ── LOGOUT ──
 function doLogout(){
   stopDailyProfitTimer();
+  stopProofEngine();
   if(userListener&&currentUsername){ db.ref('users/'+safeKey(currentUsername)).off('value',userListener); userListener=null; }
   sessionStorage.removeItem('dw_current_user');
   currentUser=null; currentUsername=null;
@@ -899,7 +929,55 @@ async function doWithdraw(){
   } catch(e){ showToast('❌ Failed. Try again.','#f87171'); }
 }
 
-// ── INIT ──
+// ── FAQ TOGGLE ──
+function toggleFaq(el){ const o=el.classList.contains('open'); document.querySelectorAll('.faq-item').forEach(f=>f.classList.remove('open')); if(!o)el.classList.add('open'); }
+
+// ── FIX 4: AUTO-READ ?ref= FROM URL ──
+(function(){
+  const params=new URLSearchParams(window.location.search);
+  const ref=params.get('ref');
+  if(ref) sessionStorage.setItem('dw_pending_ref',ref);
+})();
+
+// ── FIX 1: SOCIAL PROOF ENGINE ──
+const PROOF_NAMES=['Musa','Aisha','Tom','Grace','David','Koreen','Brian','Sarah','Joseph','Fatuma','Peter','Alice','Robert','Hawa','Emmanuel','Lydia','Hassan','Annet','Patrick','Zainab','Ronald','Mercy','Ivan','Proscovia','Alex','Nakato','Moses','Harriet','Julius','Flavia','Daniel','Aida','Geoffrey','Winnie','Samuel'];
+const PROOF_EMOJIS=['👨🏾','👩🏽','👦🏿','👧🏾','🧑🏽','👨🏿','👩🏾','👦🏽','🧑🏿'];
+const PROOF_AMTS=[10000,15000,20000,25000,30000,50000,75000,100000,150000,200000,250000,300000,500000];
+const PROOF_TIMES=[2000,3000,4000,2500,5000,3500,4500,2000,3000];
+function fmtP(n){ return 'UGX '+Number(n).toLocaleString(); }
+function rnd(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function genProof(){
+  const name=rnd(PROOF_NAMES); const amt=rnd(PROOF_AMTS); const t=Math.floor(Math.random()*6);
+  const msgs=[
+    'registered & got UGX 4,000 bonus 🎁',
+    'invested '+fmtP(amt)+' 🚀',
+    'earned '+fmtP(Math.floor(amt*.1))+' referral bonus 🔗',
+    'withdrawn '+fmtP(Math.floor(amt*.9))+' 💸',
+    're-invested '+fmtP(amt)+' 🔄',
+    'earned daily profit '+fmtP(Math.floor(amt*.1))+' 📈'
+  ];
+  return {name, msg:msgs[t], emoji:rnd(PROOF_EMOJIS)};
+}
+let proofTimer=null;
+function startProofEngine(){
+  const card=document.getElementById('proof-card');
+  const nameEl=document.getElementById('proof-name');
+  const msgEl=document.getElementById('proof-msg');
+  const avEl=document.getElementById('proof-av');
+  if(!card)return;
+  function next(){
+    const d=genProof();
+    nameEl.textContent=d.name; msgEl.textContent=d.msg; avEl.textContent=d.emoji;
+    card.classList.remove('hiding'); card.classList.add('visible');
+    proofTimer=setTimeout(()=>{
+      card.classList.remove('visible'); card.classList.add('hiding');
+      proofTimer=setTimeout(next,600);
+    },rnd(PROOF_TIMES));
+  }
+  next();
+}
+function stopProofEngine(){ if(proofTimer){clearTimeout(proofTimer);proofTimer=null;} const c=document.getElementById('proof-card'); if(c){c.classList.remove('visible','hiding');} }
+
 initApp();
 </script>
 </body>

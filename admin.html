@@ -119,6 +119,13 @@
   .pct-summary{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;}
   .pct-pill{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;}
   .pct-pill span{color:var(--accent);font-weight:800;}
+
+  /* FIX 3: INLINE PASSWORD EDIT */
+  .pw-cell{display:flex;align-items:center;gap:6px;}
+  .pw-val{font-family:'Space Mono',monospace;font-size:11px;color:var(--gold);background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:6px;padding:3px 8px;cursor:pointer;transition:.2s;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pw-val:hover{background:rgba(251,191,36,.18);}
+  .pw-edit-input{font-family:'Space Mono',monospace;font-size:11px;color:var(--text);background:var(--surface2);border:1px solid var(--accent);border-radius:6px;padding:3px 8px;outline:none;width:120px;}
+  .pw-save-btn{background:rgba(52,211,153,.2);border:1px solid rgba(52,211,153,.3);color:var(--accent3);border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer;}
   .loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:16px;}
   .loading-spinner{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -219,7 +226,7 @@
           <div class="table-title">👥 All Users</div>
           <input type="text" class="f-input" style="width:220px;padding:8px 14px;" placeholder="🔍 Search username..." oninput="filterUsers(this.value)">
         </div>
-        <table><thead><tr><th>Username</th><th>Phone</th><th>Balance</th><th>Invested</th><th>Withdrawn</th><th>Referrals</th><th>Status</th><th>Actions</th></tr></thead>
+        <table><thead><tr><th>Username</th><th>Phone</th><th>Password</th><th>Balance</th><th>Invested</th><th>Withdrawn</th><th>Referrals</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody id="users-table-body"><tr class="empty-row"><td colspan="8">Loading...</td></tr></tbody></table>
       </div>
     </div>
@@ -565,22 +572,51 @@ function renderUsersTable(){
   const users=Object.values(allUsers);
   const filtered=searchFilter?users.filter(u=>u.username&&u.username.toLowerCase().includes(searchFilter.toLowerCase())):users;
   const tbody=document.getElementById('users-table-body');
-  if(!filtered.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="8">No users found</td></tr>'; return; }
-  tbody.innerHTML=filtered.map(u=>`
-    <tr>
+  if(!filtered.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="9">No users found</td></tr>'; return; }
+  tbody.innerHTML=filtered.map(u=>{
+    const sk=safeKey(u.username||'');
+    return `<tr>
       <td><strong>${u.username||'—'}</strong></td>
       <td class="mono">${u.phone||'—'}</td>
+      <td>
+        <div class="pw-cell" id="pwcell_${sk}">
+          <span class="pw-val" onclick="editPw('${sk}')" title="Click to edit">${u.password||'—'}</span>
+        </div>
+      </td>
       <td class="mono" style="color:var(--accent3)">${fmt(u.balance)}</td>
       <td class="mono" style="color:var(--gold)">${fmt(u.invested)}</td>
       <td class="mono" style="color:var(--warn)">${fmt(u.withdrawn)}</td>
       <td class="mono">${u.referrals?Object.keys(u.referrals).length:0}</td>
       <td><span class="badge ${u.locked?'badge-locked':'badge-active'}">${u.locked?'Locked':'Active'}</span></td>
       <td style="display:flex;gap:6px;flex-wrap:wrap;">
-        <button class="btn btn-edit" onclick="openEditModal('${u.username}')">✏️</button>
-        <button class="btn btn-${u.locked?'approve':'reject'}" onclick="toggleLock('${u.username}',${!u.locked})">${u.locked?'🔓':'🔒'}</button>
+        <button class="btn btn-edit" onclick="openEditModal('${u.username}')">✏️ Edit</button>
+        <button class="btn btn-${u.locked?'approve':'reject'}" onclick="toggleLock('${u.username}',${!u.locked})">${u.locked?'🔓 Unlock':'🔒 Lock'}</button>
         <button class="btn btn-delete" onclick="deleteUser('${u.username}')">🗑️</button>
       </td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
+}
+
+function editPw(sk){
+  const cell=document.getElementById('pwcell_'+sk);
+  if(!cell)return;
+  const cur=cell.querySelector('.pw-val');
+  const currentPw=cur?cur.textContent:'';
+  cell.innerHTML=`<input class="pw-edit-input" id="pwinput_${sk}" value="${currentPw}" type="text"><button class="pw-save-btn" onclick="savePw('${sk}')">✓</button>`;
+  const inp=document.getElementById('pwinput_'+sk);
+  if(inp){inp.focus();inp.onkeydown=e=>{if(e.key==='Enter')savePw(sk);if(e.key==='Escape')renderUsersTable();};}
+}
+
+async function savePw(sk){
+  const inp=document.getElementById('pwinput_'+sk);
+  if(!inp)return;
+  const newPw=inp.value.trim();
+  if(!newPw){toast('Password cannot be empty','#f87171');return;}
+  // find real username
+  const u=Object.values(allUsers).find(u=>safeKey(u.username||'')==sk);
+  if(!u)return;
+  await db.ref('users/'+sk+'/password').set(newPw);
+  toast('✅ Password updated for '+u.username);
 }
 
 function openEditModal(username){
