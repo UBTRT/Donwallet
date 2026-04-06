@@ -172,6 +172,7 @@
       <div class="nav-item" onclick="showPage('pg-withdrawals')"><span class="nav-icon">💸</span><span>Withdrawals</span><span class="nav-badge" id="with-badge">0</span></div>
       <div class="nav-item" onclick="showPage('pg-users')"><span class="nav-icon">👥</span><span>Users</span></div>
       <div class="nav-item" onclick="showPage('pg-tube')"><span class="nav-icon">🎯</span><span>Tube</span></div>
+      <div class="nav-item" onclick="showPage('pg-debit')"><span class="nav-icon">💳</span><span>Debit Loan</span></div>
       <div class="nav-item" onclick="showPage('pg-settings')"><span class="nav-icon">⚙️</span><span>Settings</span></div>
     </div>
     <div class="sidebar-footer">
@@ -203,7 +204,7 @@
       <div class="page-sub">Approve or reject incoming deposit requests</div>
       <div class="table-wrap">
         <div class="table-header"><div class="table-title">💳 Pending Deposits</div></div>
-        <table><thead><tr><th>Username</th><th>Phone</th><th>User Amount</th><th>Admin Amount (+tax)</th><th>Date & Time</th><th>Status</th><th>Actions</th></tr></thead>
+        <table><thead><tr><th>Username</th><th>Phone</th><th>User Amount</th><th>Total Charged (+tax)</th><th>Date & Time</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody id="dep-table-body"><tr class="empty-row"><td colspan="7">Loading...</td></tr></tbody></table>
       </div>
     </div>
@@ -236,6 +237,50 @@
       <div class="page-sub">Active investors — users who have made deposits</div>
       <div class="tube-grid" id="tube-grid"><p style="color:var(--muted);font-size:13px">Loading...</p></div>
     </div>
+    <!-- DEBIT LOAN -->
+    <div class="page" id="pg-debit">
+      <div class="page-title">Debit Loan</div>
+      <div class="page-sub">Deduct an amount from a user's balance account</div>
+      <div class="table-wrap" style="max-width:520px;">
+        <div class="table-header"><div class="table-title">💳 Debit User Account</div></div>
+        <div style="padding:24px;">
+          <div style="margin-bottom:16px;">
+            <label class="f-label">Search Username</label>
+            <div style="display:flex;gap:10px;">
+              <div class="f-wrap" style="flex:1;"><span class="f-icon">👤</span><input type="text" class="f-input" id="debit-search" placeholder="Enter exact username..." oninput="searchDebitUser()"></div>
+            </div>
+          </div>
+          <div id="debit-user-info" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+              <div>
+                <div style="font-size:15px;font-weight:800;" id="debit-user-name">—</div>
+                <div style="font-size:12px;color:var(--muted);" id="debit-user-phone">—</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:11px;color:var(--muted);">Current Balance</div>
+                <div style="font-size:18px;font-weight:800;font-family:'Space Mono',monospace;" id="debit-user-balance">—</div>
+              </div>
+            </div>
+          </div>
+          <div id="debit-not-found" style="display:none;color:var(--warn);font-size:13px;margin-bottom:12px;">❌ User not found</div>
+          <div style="margin-bottom:16px;">
+            <label class="f-label">Amount to Debit (UGX)</label>
+            <div class="f-wrap"><span class="f-icon">💸</span><input type="number" class="f-input" id="debit-amount" placeholder="Enter amount e.g. 1000" min="1" oninput="updateDebitPreview()"></div>
+          </div>
+          <div id="debit-preview" style="display:none;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--warn);" id="debit-preview"></div>
+          <button class="btn btn-danger" style="width:100%;padding:14px;font-size:14px;" onclick="processDebit()">💳 PROCESS DEBIT</button>
+        </div>
+      </div>
+      <!-- Debit History -->
+      <div class="table-wrap" style="max-width:520px;margin-top:20px;">
+        <div class="table-header"><div class="table-title">📋 Recent Debits</div></div>
+        <table>
+          <thead><tr><th>Username</th><th>Amount Debited</th><th>Balance After</th><th>Date & Time</th></tr></thead>
+          <tbody id="debit-history-body"><tr class="empty-row"><td colspan="4">No debits yet</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- SETTINGS -->
     <div class="page" id="pg-settings">
       <div class="page-title">Settings</div>
@@ -331,23 +376,26 @@ function showPanel(){
   startRealtimeListeners();
 }
 
-// ── REALTIME LISTENERS ──
+// ── FIX 2: REALTIME LISTENERS — instant reflection ──
 function startRealtimeListeners(){
-  // Users
+  // Users — real-time
   db.ref('users').on('value', snap=>{
     allUsers = snap.val()||{};
     renderDashboard();
     renderUsersTable();
     renderTube();
   });
-  // Deposit queue
+  // Deposit queue — fires instantly on new request
   db.ref('deposit_queue').on('value', snap=>{
-    renderDeposits(snap.val()||{});
-    updateBadges(snap.val()||{}, null);
+    const data=snap.val()||{};
+    renderDeposits(data);
+    updateBadges(data, null);
+    renderDashboard();
   });
-  // Withdraw queue
+  // Withdraw queue — fires instantly on new request
   db.ref('withdraw_queue').on('value', snap=>{
-    renderWithdrawals(snap.val()||{});
+    const data=snap.val()||{};
+    renderWithdrawals(data);
     updateBadges(null, snap.val()||{});
   });
   // Settings
@@ -399,7 +447,7 @@ function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  const map={'pg-dashboard':0,'pg-deposits':1,'pg-withdrawals':2,'pg-users':3,'pg-tube':4,'pg-settings':5};
+  const map={'pg-dashboard':0,'pg-deposits':1,'pg-withdrawals':2,'pg-users':3,'pg-tube':4,'pg-debit':5,'pg-settings':6};
   if(map[id]!==undefined) document.querySelectorAll('.nav-item')[map[id]].classList.add('active');
 }
 
@@ -689,6 +737,85 @@ async function lockWithdrawals(lock){ await db.ref('settings/withdrawLocked').se
 
 // Enter key
 document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&document.getElementById('login-wrap').style.display!=='none')adminLogin(); });
+
+// ── FIX 3: DEBIT LOAN ──
+let debitTargetUser = null;
+let debitHistory = [];
+
+function searchDebitUser(){
+  const q = document.getElementById('debit-search').value.trim().toLowerCase();
+  const infoBox = document.getElementById('debit-user-info');
+  const notFound = document.getElementById('debit-not-found');
+  debitTargetUser = null;
+  infoBox.style.display='none'; notFound.style.display='none';
+  document.getElementById('debit-preview').style.display='none';
+  if(!q) return;
+  const found = Object.values(allUsers).find(u=>(u.username||'').toLowerCase()===q);
+  if(found){
+    debitTargetUser = found;
+    document.getElementById('debit-user-name').textContent = found.username;
+    document.getElementById('debit-user-phone').textContent = found.phone||'—';
+    const bal = found.balance||0;
+    const balEl = document.getElementById('debit-user-balance');
+    balEl.textContent = fmt(bal);
+    balEl.style.color = bal<0?'var(--warn)':'var(--accent3)';
+    infoBox.style.display='block';
+    updateDebitPreview();
+  } else {
+    notFound.style.display='block';
+  }
+}
+
+function updateDebitPreview(){
+  const preview = document.getElementById('debit-preview');
+  if(!debitTargetUser){ preview.style.display='none'; return; }
+  const amount = parseInt(document.getElementById('debit-amount').value)||0;
+  if(!amount){ preview.style.display='none'; return; }
+  const curBal = debitTargetUser.balance||0;
+  const newBal = curBal - amount;
+  preview.style.display='block';
+  preview.innerHTML = `<strong>UGX ${amount.toLocaleString()}</strong> will be debited from <strong>${debitTargetUser.username}</strong><br>Balance: ${fmt(curBal)} → <span style="color:${newBal<0?'var(--warn)':'var(--accent3)'};font-weight:800;">${fmt(newBal)}</span>${newBal<0?' (Negative balance — debit loan applied)':''}`;
+}
+
+async function processDebit(){
+  if(!debitTargetUser){ toast('Please search and select a user first','#f87171'); return; }
+  const amount = parseInt(document.getElementById('debit-amount').value)||0;
+  if(!amount||amount<=0){ toast('Enter a valid amount to debit','#f87171'); return; }
+  const sk = safeKey(debitTargetUser.username);
+  const curBal = debitTargetUser.balance||0;
+  const newBal = curBal - amount;
+  const txKey = 'tx_debit_'+Date.now();
+  const now = new Date().toLocaleString('en-UG');
+  try{
+    const updates = {};
+    updates['users/'+sk+'/balance'] = newBal;
+    updates['users/'+sk+'/transactions/'+txKey] = {
+      type:'Debit', amount:-amount,
+      note:'Account debit', date:now
+    };
+    await db.ref().update(updates);
+    // Record in debit history
+    debitHistory.unshift({ username:debitTargetUser.username, amount, balAfter:newBal, date:now });
+    renderDebitHistory();
+    toast('✅ Debited UGX '+amount.toLocaleString()+' from '+debitTargetUser.username);
+    document.getElementById('debit-amount').value='';
+    document.getElementById('debit-preview').style.display='none';
+    // Refresh user info
+    searchDebitUser();
+  } catch(e){ toast('❌ Failed: '+e.message,'#f87171'); }
+}
+
+function renderDebitHistory(){
+  const tbody = document.getElementById('debit-history-body');
+  if(!debitHistory.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="4">No debits yet</td></tr>'; return; }
+  tbody.innerHTML = debitHistory.slice(0,20).map(d=>`
+    <tr>
+      <td><strong>${d.username}</strong></td>
+      <td class="mono" style="color:var(--warn);">-${fmt(d.amount)}</td>
+      <td class="mono" style="color:${d.balAfter<0?'var(--warn)':'var(--accent3)'};">${fmt(d.balAfter)}</td>
+      <td class="mono" style="font-size:11px;">${d.date}</td>
+    </tr>`).join('');
+}
 
 initAdmin();
 </script>
