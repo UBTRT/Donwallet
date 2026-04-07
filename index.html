@@ -3,8 +3,32 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>DON-WALLET</title>
+<title>DON-WALLET — Invest Smart, Earn Great!</title>
+
+<!-- Open Graph / WhatsApp Share Preview -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ubtrt.github.io/Donwallet/">
+<meta property="og:title" content="DON-WALLET — Invest Smart, Earn Great!">
+<meta property="og:description" content="Uganda's Smart Investment Wallet. Earn 10% daily returns. Join thousands of investors growing their money today!">
+<meta property="og:image" content="https://raw.githubusercontent.com/UBTRT/Donwallet/main/logo.png">
+<meta property="og:image:width" content="800">
+<meta property="og:image:height" content="800">
+<meta property="og:site_name" content="DON-WALLET">
+
+<!-- Twitter/X Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="DON-WALLET — Invest Smart, Earn Great!">
+<meta name="twitter:description" content="Uganda's Smart Investment Wallet. Earn 10% daily returns for 60 days!">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/UBTRT/Donwallet/main/logo.png">
+
+<!-- WhatsApp specific -->
+<meta name="description" content="Uganda's Smart Investment Wallet. Earn 10% daily returns. Join thousands of investors today!">
+
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<!-- Favicon -->
+<link rel="icon" type="image/png" href="https://raw.githubusercontent.com/UBTRT/Donwallet/main/logo.png">
+<link rel="apple-touch-icon" href="https://raw.githubusercontent.com/UBTRT/Donwallet/main/logo.png">
+
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -439,7 +463,7 @@
     <div class="inner-header"><span style="font-size:22px">💳</span><div><div class="inner-title">Deposit</div><div class="inner-sub">Add funds to your wallet</div></div></div>
     <div class="section">
       <div class="action-card">
-        <div class="deposit-note">✅ Minimum deposit is <strong>UGX 10,000</strong>. Funds will reflect in your account shortly.</div>
+        <div class="deposit-note">✅ Minimum deposit is <strong>UGX 10,000</strong>. Funds reflect after admin approval.</div>
         <div class="field-group">
           <label class="field-label">Amount (UGX)</label>
           <div class="field-wrap"><span class="field-icon">💰</span><input type="number" id="dep-amount" placeholder="Minimum 10,000" min="10000"></div>
@@ -459,7 +483,7 @@
   <div class="dash-section" id="sec-withdraw">
     <div class="inner-header"><span style="font-size:22px">💰</span><div><div class="inner-title">Withdraw</div><div class="inner-sub">Cash out your earnings</div></div></div>
     <div class="section">
-      <div id="withdraw-locked-msg" class="locked-banner" style="display:none">🔒 Withdrawals are temporarily unavailable. Please contact support.</div>
+      <div id="withdraw-locked-msg" class="locked-banner" style="display:none">🔒 Withdrawals are currently disabled. Please contact support.</div>
       <div class="action-card">
         <div class="charge-note">⚠️ Minimum withdrawal is <strong>UGX 5,000</strong>. A <strong>10% service charge</strong> is deducted.</div>
         <div class="field-group">
@@ -473,8 +497,12 @@
         </div>
         <div class="field-group">
           <label class="field-label">Mobile Money Number</label>
-          <div class="field-wrap"><span class="field-icon">📱</span><div class="readonly-field" id="with-phone-display">—</div></div>
-          <div class="field-hint">Your registered number — cannot be changed</div>
+          <div class="field-wrap" style="position:relative;">
+            <span class="field-icon">📱</span>
+            <div class="readonly-field" id="with-phone-display" style="cursor:not-allowed;user-select:none;-webkit-user-select:none;pointer-events:none;opacity:0.85;">—</div>
+            <span style="position:absolute;right:14px;font-size:14px;">🔒</span>
+          </div>
+          <div class="field-hint" style="color:var(--warn);font-size:10px;">🔒 Locked to your registered number</div>
         </div>
         <button class="red-btn" onclick="doWithdraw()">💸 WITHDRAW</button>
       </div>
@@ -513,14 +541,14 @@
       <div class="section-title">📖 Frequently Asked Questions</div>
       <div class="faq-list">
         <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>What is DON-WALLET?<span class="faq-arrow">›</span></div><div class="faq-a">DON-WALLET is a smart investment platform that allows you to grow your money by earning 10% daily returns on your deposited amount for 60 days. You can also earn referral bonuses by inviting friends to join.</div></div>
-        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>How do I start investing?<span class="faq-arrow">›</span></div><div class="faq-a">Register an account, go to Deposit, enter at least UGX 10,000 and your mobile money number, click SUBMIT and confirm the payment. Your investment will be activated shortly after payment confirmation.</div></div>
+        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>How do I start investing?<span class="faq-arrow">›</span></div><div class="faq-a">Register an account, go to Deposit, enter at least UGX 10,000 and your mobile money number, click SUBMIT and confirm the payment. Your investment activates after admin approval.</div></div>
         <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>How much can I earn daily?<span class="faq-arrow">›</span></div><div class="faq-a">You earn 10% of your deposited amount every day for 60 days. Example: deposit UGX 100,000 → earn UGX 10,000/day → total UGX 600,000 after 60 days.</div></div>
         <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>When are daily profits credited?<span class="faq-arrow">›</span></div><div class="faq-a">Daily profits are automatically credited to your Balance every 24 hours. You also get an instant 10% profit when your deposit is approved.</div></div>
         <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>What is the minimum deposit and withdrawal?<span class="faq-arrow">›</span></div><div class="faq-a">Minimum deposit is UGX 10,000. Minimum withdrawal is UGX 5,000. A 10% service charge is deducted on every withdrawal.</div></div>
         <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>How does the referral program work?<span class="faq-arrow">›</span></div><div class="faq-a">When someone registers using your referral link and deposits, you earn: Level 1 (direct) 10%, Level 2 earns 4%, Level 3 earns 1% — credited to your Balance instantly.</div></div>
         <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>Can I withdraw my referral bonuses?<span class="faq-arrow">›</span></div><div class="faq-a">Yes, but only after activating your account by depositing or re-investing at least UGX 10,000.</div></div>
         <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>What is Re-Invest?<span class="faq-arrow">›</span></div><div class="faq-a">Re-Invest moves funds from your Balance to Invested, starting a new 60-day profit cycle. Minimum UGX 10,000, plus you get instant 10% profit.</div></div>
-        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>How long does a withdrawal take?<span class="faq-arrow">›</span></div><div class="faq-a">Withdrawals are processed quickly and securely. Funds are sent to your registered mobile money number. Contact support if delayed.</div></div>
+        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>How long does a withdrawal take?<span class="faq-arrow">›</span></div><div class="faq-a">Withdrawals are reviewed by admin and processed quickly. Funds are sent to your registered mobile money number. Contact support if delayed.</div></div>
         <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>Is my money safe?<span class="faq-arrow">›</span></div><div class="faq-a">DON-WALLET is committed to the security of all user funds. All transactions go through verified mobile money channels. Contact support for any concerns.</div></div>
       </div>
     </div>
@@ -908,10 +936,8 @@ function calcWithdraw(){
 // ── WITHDRAW ──
 async function doWithdraw(){
   clearErrors('with-amount-err');
-  if(settingsData.withdrawLocked){showModal('🔒','Withdrawals Locked','Withdrawals are temporarily unavailable. Please contact support.');return;}
+  if(settingsData.withdrawLocked){showModal('🔒','Withdrawals Locked','Withdrawals are currently disabled. Contact support.');return;}
   if(!currentUser.activated){showModal('🔒','Account Not Activated','Make a deposit first to activate your account.');return;}
-  // FIX 3: Block withdrawal if balance is negative (debit loan outstanding)
-  if((currentUser.balance||0)<0){showModal('💳','Outstanding Balance','You have an outstanding balance to clear. Your profits and bonuses will settle this automatically. Hang tight!');return;}
   const amount=parseInt(document.getElementById('with-amount').value)||0;
   if(amount<5000){setErr('with-amount-err',true,'Minimum withdrawal is UGX 5,000');return;}
   if((currentUser.balance||0)<amount){setErr('with-amount-err',true,'Insufficient balance');return;}
@@ -922,7 +948,7 @@ async function doWithdraw(){
     const newBalance=(currentUser.balance||0)-amount;
     await dbUpdate('users/'+safeKey(currentUsername),{
       balance:newBalance,
-      ['transactions/'+txKey]:{type:'Withdrawal',amount:-amount,note:'Processing...',date:dateStr(),status:'pending',txKey}
+      ['transactions/'+txKey]:{type:'Withdrawal',amount:-amount,note:'Pending admin approval',date:dateStr(),status:'pending',txKey}
     });
     await dbPush('withdraw_queue',{username:currentUsername,phone:currentUser.phone,requestedAmount:amount,netAmount:net,charge,date:dateStr(),status:'pending',txKey});
     document.getElementById('with-amount').value='';
