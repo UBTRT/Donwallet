@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DON-WALLET Admin</title>
+<title>DON-PESSA Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -143,7 +143,7 @@
   <div class="login-box">
     <div class="login-logo">
       <div class="login-logo-icon">⚙️</div>
-      <div class="login-title">DON-WALLET</div>
+      <div class="login-title">DON-PESSA</div>
       <div class="login-sub">Admin Control Panel</div>
     </div>
     <div class="f-group">
@@ -152,7 +152,7 @@
     </div>
     <div class="f-group">
       <label class="f-label">Password</label>
-      <div class="f-wrap"><span class="f-icon">🔒</span><input type="password" class="f-input" id="a-pass" placeholder="Admin password"></div>
+      <div class="f-wrap"><span class="f-icon">🔒</span><input type="password" class="f-input" id="a-pass" placeholder="Admin password" style="padding-right:46px"><button type="button" onclick="toggleAdminPw()" id="a-eye" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted);line-height:1;padding:4px;">👁️</button></div>
     </div>
     <div class="f-err" id="a-err" style="font-size:12px;text-align:center;margin-bottom:10px;"></div>
     <button class="login-btn" onclick="adminLogin()">Sign In to Admin →</button>
@@ -163,7 +163,7 @@
 <div class="admin-wrap" id="admin-wrap">
   <div class="sidebar">
     <div class="sidebar-brand">
-      <div class="sidebar-brand-name">DON-WALLET</div>
+      <div class="sidebar-brand-name">DON-PESSA</div>
       <div class="sidebar-sub">Admin Panel</div>
     </div>
     <div class="sidebar-nav">
@@ -776,6 +776,14 @@ async function deleteAllData(){
     db.ref('withdraw_queue').remove()
   ]);
   toast('💥 All data deleted','#f87171');
+}
+
+// Toggle admin password visibility
+function toggleAdminPw(){
+  const inp=document.getElementById('a-pass');
+  const btn=document.getElementById('a-eye');
+  if(inp.type==='password'){inp.type='text';btn.textContent='🙈';}
+  else{inp.type='password';btn.textContent='👁️';}
 }
 
 // Enter key
