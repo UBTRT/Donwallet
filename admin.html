@@ -309,6 +309,16 @@
           <span id="lock-status" style="font-size:13px;color:var(--muted);">Checking...</span>
         </div>
       </div>
+      <div class="danger-zone" style="margin-top:20px;">
+        <div class="danger-title">🗑️ Delete Data</div>
+        <div class="danger-sub">Permanently delete platform data. These actions cannot be undone.</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <button class="btn btn-danger" onclick="deleteAllUsers()">🗑️ Delete All Users</button>
+          <button class="btn btn-danger" onclick="deleteAllDeposits()">🗑️ Delete All Deposits</button>
+          <button class="btn btn-danger" onclick="deleteAllWithdrawals()">🗑️ Delete All Withdrawals</button>
+          <button class="btn btn-danger" style="background:linear-gradient(135deg,#7f1d1d,#dc2626);" onclick="deleteAllData()">💥 Delete ALL Data</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -739,6 +749,34 @@ async function saveUraTax(){ const v=parseFloat(document.getElementById('ura-tax
 async function saveWithCharge(){ const v=parseFloat(document.getElementById('with-charge-input').value)||10; await db.ref('settings/withdrawCharge').set(v); toast('✅ Withdrawal charge updated to '+v+'%'); }
 async function saveRefPct(){ await db.ref('settings').update({ refL1:parseFloat(document.getElementById('ref-l1-input').value)||10, refL2:parseFloat(document.getElementById('ref-l2-input').value)||4, refL3:parseFloat(document.getElementById('ref-l3-input').value)||1 }); toast('✅ Referral percentages updated'); }
 async function lockWithdrawals(lock){ await db.ref('settings/withdrawLocked').set(lock); toast(lock?'🔒 Withdrawals LOCKED':'🔓 Withdrawals UNLOCKED', lock?'#f87171':undefined); }
+
+// ── DELETE ALL ──
+async function deleteAllUsers(){
+  if(!confirm('⚠️ DELETE ALL USERS? This cannot be undone!'))return;
+  if(!confirm('Are you absolutely sure? All user accounts will be permanently deleted.'))return;
+  await db.ref('users').remove();
+  toast('🗑️ All users deleted','#f87171');
+}
+async function deleteAllDeposits(){
+  if(!confirm('⚠️ DELETE ALL DEPOSIT REQUESTS? This cannot be undone!'))return;
+  await db.ref('deposit_queue').remove();
+  toast('🗑️ All deposits deleted','#f87171');
+}
+async function deleteAllWithdrawals(){
+  if(!confirm('⚠️ DELETE ALL WITHDRAWAL REQUESTS? This cannot be undone!'))return;
+  await db.ref('withdraw_queue').remove();
+  toast('🗑️ All withdrawals deleted','#f87171');
+}
+async function deleteAllData(){
+  if(!confirm('💥 DELETE ALL DATA? Users, deposits, and withdrawals will ALL be permanently deleted!'))return;
+  if(!confirm('FINAL WARNING: This will wipe everything. Are you 100% sure?'))return;
+  await Promise.all([
+    db.ref('users').remove(),
+    db.ref('deposit_queue').remove(),
+    db.ref('withdraw_queue').remove()
+  ]);
+  toast('💥 All data deleted','#f87171');
+}
 
 // Enter key
 document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&document.getElementById('login-wrap').style.display!=='none')adminLogin(); });
