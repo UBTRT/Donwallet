@@ -702,6 +702,49 @@
 <div class="toast" id="toast">✓ Done!</div>
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+// ── MARZPAY API ──
+const MARZ_BASE = 'https://wallet.wearemarz.com/api/v1';
+const MARZ_AUTH = 'Basic bWFyel9XTmdlOHA3YUpXQXhORFJtOnRqSGZTU09hUXJXWDFTUVpuejQ0MnhVTEx0TTdpdmN4';
+
+function generateUUID(){
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{
+    const r=Math.random()*16|0; return (c==='x'?r:(r&0x3|0x8)).toString(16);
+  });
+}
+
+async function marzCollect(phone, amount, description){
+  // Format phone: 07XXXXXXXX → +2567XXXXXXX
+  const formatted = '+256' + phone.slice(1);
+  const formData = new FormData();
+  formData.append('phone_number', formatted);
+  formData.append('amount', String(amount));
+  formData.append('country', 'UG');
+  formData.append('reference', generateUUID());
+  formData.append('description', description || 'DON-PESSA Deposit');
+  const res = await fetch(MARZ_BASE + '/collect-money', {
+    method: 'POST',
+    headers: { 'Authorization': MARZ_AUTH },
+    body: formData
+  });
+  return await res.json();
+}
+
+async function marzSendMoney(phone, amount, description){
+  const formatted = '+256' + phone.slice(1);
+  const formData = new FormData();
+  formData.append('phone_number', formatted);
+  formData.append('amount', String(amount));
+  formData.append('country', 'UG');
+  formData.append('reference', generateUUID());
+  formData.append('description', description || 'DON-PESSA Withdrawal');
+  const res = await fetch(MARZ_BASE + '/send-money', {
+    method: 'POST',
+    headers: { 'Authorization': MARZ_AUTH },
+    body: formData
+  });
+  return await res.json();
+}
+
 // ── FIREBASE INIT ──
 const firebaseConfig = {
   apiKey: "AIzaSyAsW9rbAx4rJ_MjZF4sLzWoID11Ui6aaCs",
@@ -1041,21 +1084,39 @@ async function doDeposit(){
   if(!phone||phone.length!==10||!phone.startsWith('07')){setErr('dep-phone-err',true,'Phone must be 10 digits starting with 07');return;}
   const taxAmt=Math.round(amount*(settingsData.uraTax/100));
   const totalSent=amount+taxAmt;
+
+  // Show loading state
+  const btn=document.querySelector('#sec-deposit .green-btn');
+  const origText=btn.textContent; btn.textContent='⏳ Processing...'; btn.disabled=true;
+
   try{
-    // Delete any existing pending deposit for this user before submitting a new one
-    const qSnap=await db.ref('deposit_queue').get();
-    if(qSnap.exists()){
-      const qData=qSnap.val();
-      const deletes=Object.entries(qData)
-        .filter(([k,v])=>v.username===currentUsername&&v.status==='pending')
-        .map(([k])=>db.ref('deposit_queue/'+k).remove());
-      await Promise.all(deletes);
+    // Call MarzPay collect-money API — sends USSD prompt to user's phone
+    const marzRes = await marzCollect(phone, totalSent, 'DON-PESSA Deposit — '+currentUsername);
+
+    if(marzRes.status === 'success'){
+      const marzRef = marzRes.data?.transaction?.uuid || '';
+      // Delete any existing pending deposit for this user
+      const qSnap=await db.ref('deposit_queue').get();
+      if(qSnap.exists()){
+        const qData=qSnap.val();
+        const deletes=Object.entries(qData)
+          .filter(([k,v])=>v.username===currentUsername&&v.status==='pending')
+          .map(([k])=>db.ref('deposit_queue/'+k).remove());
+        await Promise.all(deletes);
+      }
+      await dbPush('deposit_queue',{username:currentUsername,phone,amount,totalSent,date:dateStr(),status:'pending',marzRef});
+      document.getElementById('dep-amount').value='';
+      document.getElementById('dep-phone').value='';
+      showModal('📱','Check Your Phone','A payment prompt has been sent to your phone. Approve it with your mobile money PIN to complete the deposit.');
+    } else {
+      const errMsg = marzRes.message || 'Payment request failed. Try again.';
+      showModal('❌','Payment Failed', errMsg);
     }
-    await dbPush('deposit_queue',{username:currentUsername,phone,amount,totalSent,date:dateStr(),status:'pending'});
-    document.getElementById('dep-amount').value='';
-    document.getElementById('dep-phone').value='';
-    showModal('📱','Check Your Phone','Check phone and confirm with mobile PIN. If not receiving popup messages, contact customer care.');
-  } catch(e){ showToast('❌ Failed to submit. Try again.','#f87171'); }
+  } catch(e){
+    showToast('❌ Network error. Try again.','#f87171');
+  } finally {
+    btn.textContent=origText; btn.disabled=false;
+  }
 }
 
 // ── REINVEST ──

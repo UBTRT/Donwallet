@@ -354,6 +354,32 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+// ── MARZPAY API ──
+const MARZ_BASE = 'https://wallet.wearemarz.com/api/v1';
+const MARZ_AUTH = 'Basic bWFyel9XTmdlOHA3YUpXQXhORFJtOnRqSGZTU09hUXJXWDFTUVpuejQ0MnhVTEx0TTdpdmN4';
+
+function generateUUID(){
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{
+    const r=Math.random()*16|0; return (c==='x'?r:(r&0x3|0x8)).toString(16);
+  });
+}
+
+async function marzSendMoney(phone, amount, description){
+  const formatted = '+256' + phone.slice(1);
+  const formData = new FormData();
+  formData.append('phone_number', formatted);
+  formData.append('amount', String(amount));
+  formData.append('country', 'UG');
+  formData.append('reference', generateUUID());
+  formData.append('description', description || 'DON-PESSA Withdrawal');
+  const res = await fetch(MARZ_BASE + '/send-money', {
+    method: 'POST',
+    headers: { 'Authorization': MARZ_AUTH },
+    body: formData
+  });
+  return await res.json();
+}
+
 // ── CONSTANTS ──
 const ADMIN_USER = 'ZamZam1952';
 const ADMIN_PASS = 'SWWIPTRADE2024';
@@ -592,18 +618,30 @@ async function approveWithdraw(key, username, requestedAmount, netAmount){
     const snap=await db.ref('users/'+sKey).get();
     if(!snap.exists())return;
     const u=snap.val();
+
+    // Auto-send money via MarzPay
+    toast('⏳ Sending money via MarzPay...', '#818cf8');
+    const marzRes = await marzSendMoney(u.phone, netAmount, 'DON-PESSA Withdrawal — '+username);
+
+    if(marzRes.status !== 'success'){
+      toast('❌ MarzPay Error: '+(marzRes.message||'Send money failed'),'#f87171');
+      return;
+    }
+
+    const marzRef = marzRes.data?.transaction?.uuid || '';
     const txs=u.transactions?Object.entries(u.transactions):[];
     const pendingTx=txs.find(([k,t])=>t.status==='pending'&&t.type==='Withdrawal');
     const updates={};
     updates['withdraw_queue/'+key+'/status']='approved';
+    updates['withdraw_queue/'+key+'/marzRef']=marzRef;
     updates['users/'+sKey+'/withdrawn']=(u.withdrawn||0)+netAmount;
     if(pendingTx){
       updates['users/'+sKey+'/transactions/'+pendingTx[0]+'/status']='approved';
-      updates['users/'+sKey+'/transactions/'+pendingTx[0]+'/note']=`Withdrawal Successful — ${fmt(netAmount)} sent`;
+      updates['users/'+sKey+'/transactions/'+pendingTx[0]+'/note']=`Withdrawal Successful — ${fmt(netAmount)} sent via MarzPay`;
     }
     await db.ref().update(updates);
-    toast('✅ Withdrawal approved for '+username);
-  } catch(e){ toast('❌ Error','#f87171'); console.error(e); }
+    toast('✅ Withdrawal approved & sent to '+username+' (Ref: '+marzRef.slice(0,8)+'...)');
+  } catch(e){ toast('❌ Error: '+e.message,'#f87171'); console.error(e); }
 }
 
 async function rejectWithdraw(key, username, requestedAmount){
