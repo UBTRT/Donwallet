@@ -25,7 +25,6 @@
 <meta name="description" content="Uganda's Smart Investment Wallet. Earn 10% daily returns. Join thousands of investors today!">
 
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<!-- Favicon -->
 <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/UBTRT/Donwallet/main/logo.png">
 <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/UBTRT/Donwallet/main/logo.png">
 
@@ -56,13 +55,31 @@
   .field-icon{position:absolute;left:14px;font-size:16px;pointer-events:none;z-index:2;}
   input,select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:13px 14px 13px 42px;font-family:'Syne',sans-serif;font-size:14px;color:var(--text);outline:none;transition:border-color .2s,box-shadow .2s;-webkit-appearance:none;}
   input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(56,189,248,.1);}
+  input:disabled{opacity:0.45;cursor:not-allowed;}
   select{cursor:pointer;}select option{background:#1a2235;}
   .eye-btn{position:absolute;right:14px;background:none;border:none;font-size:18px;cursor:pointer;padding:4px;color:var(--muted);z-index:2;transition:color .2s;line-height:1;}
   .eye-btn:hover{color:var(--accent);}
   input[type="password"],.pw-input{padding-right:46px;}
-  .phone-wrap{display:flex;gap:8px;}
-  .phone-prefix{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:13px 10px;font-family:'Space Mono',monospace;font-size:12px;color:var(--accent);min-width:60px;text-align:center;font-weight:700;white-space:nowrap;}
-  .phone-wrap input{padding-left:14px;}
+
+  /* ── PHONE WITH PREFIX ── */
+  .phone-prefix-wrap{display:flex;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:border-color .2s,box-shadow .2s;}
+  .phone-prefix-wrap:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(56,189,248,.1);}
+  .phone-prefix-badge{background:rgba(56,189,248,.12);border-right:1px solid var(--border);padding:13px 12px;font-family:'Space Mono',monospace;font-size:13px;color:var(--accent);font-weight:700;white-space:nowrap;flex-shrink:0;}
+  .phone-prefix-wrap input{background:transparent;border:none;border-radius:0;padding:13px 14px;box-shadow:none !important;flex:1;}
+  .phone-prefix-wrap input:focus{border:none;box-shadow:none;}
+
+  /* ── NETWORK SELECTOR ── */
+  .network-selector{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+  .network-btn{background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;transition:.2s;font-family:'Syne',sans-serif;}
+  .network-btn:hover{border-color:rgba(56,189,248,.4);}
+  .network-btn.selected.mtn{border-color:#fbbf24;background:rgba(251,191,36,.08);}
+  .network-btn.selected.airtel{border-color:#f87171;background:rgba(248,113,113,.08);}
+  .network-btn-logo{font-size:28px;}
+  .network-btn-name{font-size:12px;font-weight:800;letter-spacing:.5px;}
+  .network-btn.selected.mtn .network-btn-name{color:#fbbf24;}
+  .network-btn.selected.airtel .network-btn-name{color:#f87171;}
+  .network-label{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:9px;display:block;}
+
   .field-hint{font-size:10px;color:var(--muted);margin-top:5px;padding-left:4px;}
   .field-error{font-size:10px;color:var(--warn);margin-top:5px;padding-left:4px;display:none;}
   .field-error.show{display:block;}
@@ -183,8 +200,10 @@
   .action-card{background:linear-gradient(135deg,#0f1f38,#111827);border:1px solid var(--border);border-radius:20px;padding:22px 18px;animation:cardIn .6s ease both;}
   .green-btn{width:100%;background:#16a34a;border:none;border-radius:14px;padding:16px;font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#fff;cursor:pointer;transition:.2s;margin-top:8px;box-shadow:0 4px 24px rgba(22,163,74,.4);}
   .green-btn:active{transform:scale(.98);}
+  .green-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
   .red-btn{width:100%;background:#dc2626;border:none;border-radius:14px;padding:16px;font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#fff;cursor:pointer;transition:.2s;margin-top:8px;box-shadow:0 4px 24px rgba(220,38,38,.4);}
   .red-btn:active{transform:scale(.98);}
+  .red-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
   .readonly-field{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 14px 13px 42px;font-family:'Space Mono',monospace;font-size:13px;color:var(--muted);}
   .charge-note{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:10px;padding:10px 14px;font-size:11px;color:var(--warn);margin-bottom:12px;line-height:1.6;}
   .deposit-note{background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2);border-radius:10px;padding:10px 14px;font-size:11px;color:var(--accent3);margin-bottom:12px;line-height:1.6;}
@@ -236,7 +255,7 @@
   .locked-banner{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);border-radius:12px;padding:12px 16px;font-size:12px;color:var(--warn);text-align:center;margin-bottom:12px;font-weight:700;}
   .loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:16px;}
 
-  /* FIX 1: SOCIAL PROOF */
+  /* SOCIAL PROOF */
   .proof-wrap{padding:0 16px 10px;position:relative;z-index:1;}
   .proof-card{background:#16a34a;border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:10px;box-shadow:0 4px 18px rgba(22,163,74,.45);opacity:0;transition:opacity .5s ease,transform .5s ease;transform:translateY(6px);}
   .proof-card.visible{opacity:1;transform:translateY(0);}
@@ -247,6 +266,17 @@
   .loading-spinner{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg)}}
   .loading-text{font-size:14px;color:var(--muted);}
+
+  /* PAYMENT STATUS OVERLAY */
+  .pay-status-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:900;display:none;align-items:center;justify-content:center;padding:24px;}
+  .pay-status-overlay.open{display:flex;}
+  .pay-status-box{background:linear-gradient(135deg,#0f1f38,#111827);border:1px solid rgba(56,189,248,.25);border-radius:24px;padding:32px 24px;text-align:center;max-width:340px;width:100%;animation:cardUp .4s ease both;}
+  .pay-status-icon{font-size:52px;margin-bottom:16px;animation:pulse-glow 1.5s ease-in-out infinite;}
+  .pay-status-title{font-size:17px;font-weight:800;margin-bottom:8px;}
+  .pay-status-msg{font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:20px;}
+  .pay-spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px;}
+  .pay-progress{width:100%;height:4px;background:var(--surface2);border-radius:4px;overflow:hidden;margin-bottom:20px;}
+  .pay-progress-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;width:0%;transition:width .5s ease;}
 
   /* HISTORY FILTER TABS */
   .tx-filter-tabs{display:flex;gap:6px;overflow-x:auto;padding:0 16px 12px;scrollbar-width:none;}
@@ -275,8 +305,6 @@
   .company-cta{background:linear-gradient(135deg,rgba(56,189,248,.1),rgba(129,140,248,.1));border:1px solid rgba(56,189,248,.25);border-radius:16px;padding:20px 16px;text-align:center;margin-bottom:12px;}
   .company-cta-title{font-size:16px;font-weight:800;margin-bottom:6px;}
   .company-cta-sub{font-size:12px;color:var(--muted);line-height:1.6;}
-
-  /* WITHDRAW LOCKED NAV */
   .nav-item.withdraw-locked{opacity:0.35;pointer-events:none;cursor:not-allowed;}
   .menu-item.withdraw-locked{opacity:0.35;pointer-events:none;cursor:not-allowed;}
 </style>
@@ -331,8 +359,8 @@
     </div>
     <div class="field-group">
       <label class="field-label">Country</label>
-      <div class="field-wrap"><span class="field-icon">🌍</span>
-        <select id="reg-country" onchange="updatePrefix()">
+      <div class="field-wrap"><span class="field-icon">??</span>
+        <select id="reg-country" onchange="updateRegPrefix()">
           <option value="">— Select Country —</option>
           <option value="UG">🇺🇬 Uganda</option>
           <option value="KE">🇰🇪 Kenya</option>
@@ -342,12 +370,12 @@
     </div>
     <div class="field-group">
       <label class="field-label">Phone Number</label>
-      <div class="phone-wrap">
-        <div class="phone-prefix" id="phone-prefix">+???</div>
-        <input type="tel" id="reg-phone" placeholder="07XXXXXXXX" maxlength="10" oninput="phoneInput(this)">
+      <div class="phone-prefix-wrap" id="reg-phone-wrap">
+        <div class="phone-prefix-badge" id="reg-phone-prefix">+???</div>
+        <input type="tel" id="reg-phone" placeholder="7XXXXXXXX" maxlength="9" oninput="regPhoneInput(this)">
       </div>
-      <div class="field-hint">10 digits, must start with 07</div>
-      <div class="field-error" id="reg-phone-err">Phone must be 10 digits starting with 07</div>
+      <div class="field-hint">9 digits starting with 7 — e.g. 712345678</div>
+      <div class="field-error" id="reg-phone-err">Enter 9 digits starting with 7</div>
     </div>
     <div class="field-group">
       <label class="field-label">Referral Code (Optional)</label>
@@ -418,6 +446,21 @@
     </div>
     <div class="section"><button class="wa-btn" onclick="openWaGroup()"><span style="font-size:20px">💬</span>Join Community Group</button></div>
     <div class="proof-wrap"><div class="proof-card" id="proof-card"><div class="proof-av" id="proof-av">👤</div><div><div class="proof-name-el" id="proof-name">Musa</div><div class="proof-msg-el" id="proof-msg">invested UGX 50,000 🚀</div></div></div></div>
+    <div class="section">
+      <div class="plan-wrap">
+        <div class="plan-header"><div class="plan-header-title">📊 10% DAILY FOR 60 DAYS</div></div>
+        <table class="plan-table">
+          <thead><tr><th>💰 INVEST</th><th>📈 DAILY</th><th>🏆 60 DAYS</th></tr></thead>
+          <tbody>
+            <tr><td>10,000</td><td>1,000</td><td>60,000</td></tr>
+            <tr><td>50,000</td><td>5,000</td><td>300,000</td></tr>
+            <tr><td>100,000</td><td>10,000</td><td>600,000</td></tr>
+            <tr><td>500,000</td><td>50,000</td><td>3,000,000</td></tr>
+          </tbody>
+        </table>
+        <div class="plan-footer"><button class="start-invest-btn" onclick="switchTab('deposit')">🚀 Start Investing</button></div>
+      </div>
+    </div>
   </div>
   <!-- HISTORY -->
   <div class="dash-section" id="sec-history">
@@ -498,34 +541,58 @@
       <button class="logout-dash" onclick="doLogout()">🚪 Sign Out</button>
     </div>
   </div>
+
   <!-- DEPOSIT -->
   <div class="dash-section" id="sec-deposit">
     <div class="inner-header"><span style="font-size:22px">💳</span><div><div class="inner-title">Deposit</div><div class="inner-sub">Add funds to your wallet</div></div></div>
     <div class="section">
       <div class="action-card">
-        <div class="deposit-note">✅ Minimum deposit is <strong>UGX 10,000</strong>.</div>
-        <div class="field-group">
-          <label class="field-label">Amount (UGX)</label>
-          <div class="field-wrap"><span class="field-icon">💰</span><input type="number" id="dep-amount" placeholder="Minimum 10,000" min="10000"></div>
-          <div class="field-error" id="dep-amount-err">Minimum deposit is UGX 10,000</div>
+        <div class="deposit-note" id="dep-min-note">✅ Select your mobile network first, then enter your phone number and amount.</div>
+
+        <!-- STEP 1: NETWORK SELECT -->
+        <span class="network-label">Step 1 — Select Network</span>
+        <div class="network-selector">
+          <div class="network-btn mtn" id="net-mtn" onclick="selectNetwork('mtn')">
+            <div class="network-btn-logo">🟡</div>
+            <div class="network-btn-name">MTN</div>
+          </div>
+          <div class="network-btn airtel" id="net-airtel" onclick="selectNetwork('airtel')">
+            <div class="network-btn-logo">🔴</div>
+            <div class="network-btn-name">AIRTEL</div>
+          </div>
         </div>
-        <div class="field-group">
-          <label class="field-label">Mobile Money Number</label>
-          <div class="field-wrap"><span class="field-icon">📱</span><input type="tel" id="dep-phone" placeholder="07XXXXXXXX" maxlength="10" oninput="phoneInput(this)"></div>
-          <div class="field-hint">10 digits, must start with 07</div>
-          <div class="field-error" id="dep-phone-err">Phone must be 10 digits starting with 07</div>
+        <div class="field-error" id="dep-network-err">Please select MTN or Airtel first</div>
+
+        <!-- STEP 2: PHONE -->
+        <div class="field-group" style="margin-top:6px">
+          <label class="field-label">Step 2 — Phone Number</label>
+          <div class="phone-prefix-wrap" id="dep-phone-wrap" style="opacity:0.45;">
+            <div class="phone-prefix-badge">+256</div>
+            <input type="tel" id="dep-phone" placeholder="7XXXXXXXX" maxlength="9" oninput="depPhoneInput(this)" disabled>
+          </div>
+          <div class="field-hint">9 digits starting with 7 — e.g. 712345678</div>
+          <div class="field-error" id="dep-phone-err">Enter 9 digits starting with 7</div>
         </div>
-        <button class="green-btn" onclick="doDeposit()">💳 SUBMIT</button>
+
+        <!-- STEP 3: AMOUNT -->
+        <div class="field-group">
+          <label class="field-label">Step 3 — Amount (UGX)</label>
+          <div class="field-wrap"><span class="field-icon">💰</span><input type="number" id="dep-amount" placeholder="Enter amount" min="1000" disabled style="opacity:0.45;"></div>
+          <div class="field-error" id="dep-amount-err">Please check the minimum deposit amount</div>
+        </div>
+
+        <button class="green-btn" id="dep-submit-btn" onclick="doDeposit()" disabled>💳 SUBMIT DEPOSIT</button>
       </div>
     </div>
   </div>
+
   <!-- WITHDRAW -->
   <div class="dash-section" id="sec-withdraw">
     <div class="inner-header"><span style="font-size:22px">💰</span><div><div class="inner-title">Withdraw</div><div class="inner-sub">Cash out your earnings</div></div></div>
     <div class="section">
       <div id="withdraw-locked-msg" class="locked-banner" style="display:none">🔒 Withdrawals are currently disabled. Please contact support.</div>
       <div class="action-card">
-        <div class="charge-note">⚠️ Minimum withdrawal is <strong>UGX 5,000</strong>. A <strong>10% service charge</strong> is deducted.</div>
+        <div class="charge-note">⚠️ Minimum withdrawal is <strong>UGX 5,000</strong>. A <strong id="with-charge-display">10%</strong> service charge is deducted.</div>
         <div class="field-group">
           <label class="field-label">Amount (UGX)</label>
           <div class="field-wrap"><span class="field-icon">💸</span><input type="number" id="with-amount" placeholder="Minimum 5,000" min="5000" oninput="calcWithdraw()"></div>
@@ -533,7 +600,7 @@
         </div>
         <div class="field-group">
           <label class="field-label">You Will Receive</label>
-          <div class="field-wrap"><span class="field-icon">✅</span><div class="readonly-field" id="with-receive">UGX 0 (after 10% charge)</div></div>
+          <div class="field-wrap"><span class="field-icon">✅</span><div class="readonly-field" id="with-receive">UGX 0</div></div>
         </div>
         <div class="field-group">
           <label class="field-label">Mobile Money Number</label>
@@ -548,6 +615,7 @@
       </div>
     </div>
   </div>
+
   <!-- REINVEST -->
   <div class="dash-section" id="sec-reinvest">
     <div class="inner-header"><span style="font-size:22px">🔄</span><div><div class="inner-title">Re-Invest</div><div class="inner-sub">Compound your earnings</div></div></div>
@@ -567,6 +635,7 @@
       </div>
     </div>
   </div>
+
   <!-- SUPPORT -->
   <div class="dash-section" id="sec-support">
     <div class="inner-header"><span style="font-size:22px">🎧</span><div><div class="inner-title">Support</div><div class="inner-sub">We're here to help</div></div></div>
@@ -579,18 +648,17 @@
       <div class="section-title">📖 Frequently Asked Questions</div>
       <div class="faq-list">
         <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>What is DON-PESSA?<span class="faq-arrow">›</span></div><div class="faq-a">DON-PESSA is a smart investment platform that allows you to grow your money by earning 10% daily returns on your deposited amount for 60 days. You can also earn referral bonuses by inviting friends to join.</div></div>
-        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>How do I start investing?<span class="faq-arrow">›</span></div><div class="faq-a">Register an account, go to Deposit, enter at least UGX 10,000 and your mobile money number, click SUBMIT and confirm the payment. Your investment activates after your deposit is confirmed.</div></div>
+        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>How do I deposit?<span class="faq-arrow">›</span></div><div class="faq-a">Go to Deposit, select your network (MTN or Airtel), enter your phone number and amount, then click Submit. You will receive a USSD prompt on your phone — approve it with your mobile money PIN. Your balance is credited automatically.</div></div>
         <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>How much can I earn daily?<span class="faq-arrow">›</span></div><div class="faq-a">You earn 10% of your deposited amount every day for 60 days. Example: deposit UGX 100,000 → earn UGX 10,000/day → total UGX 600,000 after 60 days.</div></div>
         <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>When are daily profits credited?<span class="faq-arrow">›</span></div><div class="faq-a">Daily profits are automatically credited to your Balance every 24 hours. You also get an instant 10% profit when your deposit is confirmed.</div></div>
-        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>What is the minimum deposit and withdrawal?<span class="faq-arrow">›</span></div><div class="faq-a">Minimum deposit is UGX 10,000. Minimum withdrawal is UGX 5,000. A 10% service charge is deducted on every withdrawal.</div></div>
+        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>What is the minimum deposit and withdrawal?<span class="faq-arrow">›</span></div><div class="faq-a">Minimum deposit is set by admin (shown on the deposit page). Minimum withdrawal is UGX 5,000. A service charge is deducted on every withdrawal.</div></div>
         <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>How does the referral program work?<span class="faq-arrow">›</span></div><div class="faq-a">When someone registers using your referral link and deposits, you earn: Level 1 (direct) 10%, Level 2 earns 4%, Level 3 earns 1% — credited to your Balance instantly.</div></div>
-        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>Can I withdraw my referral bonuses?<span class="faq-arrow">›</span></div><div class="faq-a">Yes, but only after activating your account by depositing or re-investing at least UGX 10,000.</div></div>
-        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>What is Re-Invest?<span class="faq-arrow">›</span></div><div class="faq-a">Re-Invest moves funds from your Balance to Invested, starting a new 60-day profit cycle. Minimum UGX 10,000, plus you get instant 10% profit.</div></div>
-        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>How long does a withdrawal take?<span class="faq-arrow">›</span></div><div class="faq-a">Withdrawals are reviewed by our team and processed quickly. Funds are sent to your registered mobile money number. Contact support if delayed.</div></div>
+        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>How long does a withdrawal take?<span class="faq-arrow">›</span></div><div class="faq-a">Withdrawals are processed automatically via mobile money. Funds are sent directly to your registered number within minutes.</div></div>
         <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>Is my money safe?<span class="faq-arrow">›</span></div><div class="faq-a">DON-PESSA is committed to the security of all user funds. All transactions go through verified mobile money channels. Contact support for any concerns.</div></div>
       </div>
     </div>
   </div>
+
   <!-- COMPANY -->
   <div class="dash-section" id="sec-company">
     <div class="inner-header"><span style="font-size:22px">🏢</span><div><div class="inner-title">Company</div><div class="inner-sub">About DON-PESSA</div></div></div>
@@ -598,22 +666,9 @@
       <div class="company-block">
         <div class="company-block-title">💎 HOW WE PAY YOU 💎</div>
         <div class="company-text">
-          <p>Great question, family! Let us explain how this works.</p>
-        </div>
-      </div>
-      <div class="company-block">
-        <div class="company-block-title">🌍 WHERE YOUR MONEY GOES</div>
-        <div class="company-text">
-          <p>We invest in <span class="company-highlight">ONLINE TRADING</span> (Forex, Crypto &amp; Stocks) using <span class="company-highlight">ADVANCED TRADING ROBOTS 🤖</span></p>
-          <p>These robots trade <span class="company-green">24/7</span> and generate <span class="company-highlight">0.7% PROFIT EVERY HOUR!</span></p>
-          <p>That's approximately <span class="company-green">16.8% daily profit</span> from trading alone.</p>
-        </div>
-      </div>
-      <div class="company-block">
-        <div class="company-block-title">📊 HOW WE SHARE THE PROFIT</div>
-        <div class="company-text">
-          <p>We give <span class="company-highlight">YOU</span>, our beloved investors, <span class="company-highlight">10% daily return</span></p>
-          <p>We keep the remaining for operations, taxes, and company growth.</p>
+          <p>Every deposit you make is <span class="company-highlight">IMMEDIATELY CONFIRMED</span> via our automated MarzPay payment system.</p>
+          <p>We use <span class="company-green">MTN Mobile Money</span> and <span class="company-green">Airtel Money</span> for instant deposits and withdrawals — <strong>NO manual approval needed.</strong></p>
+          <p>When you withdraw, funds are sent <span class="company-highlight">DIRECTLY</span> to your registered mobile money number within minutes.</p>
         </div>
       </div>
       <div class="company-block">
@@ -631,8 +686,7 @@
         <div class="company-text"><p>We have <span class="company-highlight">OFFICIAL PARTNERSHIPS</span> with:</p></div>
         <div class="company-partner"><span class="company-partner-icon">📡</span><span class="company-partner-name">MTN Uganda</span></div>
         <div class="company-partner"><span class="company-partner-icon">📡</span><span class="company-partner-name">Airtel Uganda</span></div>
-        <div class="company-partner"><span class="company-partner-icon">📡</span><span class="company-partner-name">Safaricom Kenya</span></div>
-        <div class="company-partner"><span class="company-partner-icon">📡</span><span class="company-partner-name">Airtel Kenya</span></div>
+        <div class="company-partner"><span class="company-partner-icon">📡</span><span class="company-partner-name">MarzPay — Payment Gateway</span></div>
         <div class="company-text" style="margin-top:10px"><p>This means every deposit and withdrawal is <span class="company-green">AUTOMATIC and SECURE!</span></p></div>
       </div>
       <div class="company-block">
@@ -642,16 +696,7 @@
         <div class="company-security-item"><span class="company-security-icon">💾</span>Daily backup system on secure servers</div>
         <div class="company-security-item"><span class="company-security-icon">🏦</span>Insurance coverage on all investor funds up to UGX 50,000,000</div>
         <div class="company-security-item"><span class="company-security-icon">👁️</span>Real-time fraud monitoring system</div>
-        <div class="company-security-item"><span class="company-security-icon">👮</span>Dedicated security team monitoring 24/7</div>
         <div class="company-security-item"><span class="company-security-icon">🔏</span>Funds held in separate escrow accounts (not mixed with company money)</div>
-      </div>
-      <div class="company-block">
-        <div class="company-block-title">⏰ WE'RE HERE FOR THE LONG RUN</div>
-        <div class="company-text">
-          <p>We are committed to save and grow your money until <span class="company-highlight">YEAR 2031 and beyond!</span></p>
-          <p>This is a <span class="company-green">LEGITIMATE business</span>. Not a quick scheme. Not a gamble.</p>
-          <p>We have been vetted. We have been approved. We are here to stay.</p>
-        </div>
       </div>
       <div class="company-cta">
         <div class="company-cta-title">✅ AUTOMATIC WITHDRAWALS</div>
@@ -664,6 +709,7 @@
       </div>
     </div>
   </div>
+
   <nav class="bottom-nav">
     <div class="nav-item active" onclick="switchTab('home')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></div>
     <div class="nav-item" onclick="switchTab('history')"><span class="nav-icon">📋</span><span class="nav-label">History</span></div>
@@ -691,6 +737,7 @@
   <button class="menu-logout" onclick="doLogout()"><span style="font-size:18px">🚪</span>Logout</button>
 </div>
 
+<!-- STANDARD MODAL -->
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal-box">
     <div class="modal-icon" id="modal-icon">📱</div>
@@ -699,52 +746,21 @@
     <button class="modal-close" onclick="closeModal()">OK, Got It</button>
   </div>
 </div>
+
+<!-- PAYMENT STATUS OVERLAY -->
+<div class="pay-status-overlay" id="pay-status-overlay">
+  <div class="pay-status-box">
+    <div class="pay-status-icon" id="pso-icon">📱</div>
+    <div class="pay-status-title" id="pso-title">Processing Payment</div>
+    <div class="pay-status-msg" id="pso-msg">Please wait...</div>
+    <div class="pay-spinner" id="pso-spinner"></div>
+    <div class="pay-progress"><div class="pay-progress-bar" id="pso-progress"></div></div>
+  </div>
+</div>
+
 <div class="toast" id="toast">✓ Done!</div>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
-// ── MARZPAY API ──
-const MARZ_BASE = 'https://wallet.wearemarz.com/api/v1';
-const MARZ_AUTH = 'Basic bWFyel9XTmdlOHA3YUpXQXhORFJtOnRqSGZTU09hUXJXWDFTUVpuejQ0MnhVTEx0TTdpdmN4';
-
-function generateUUID(){
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{
-    const r=Math.random()*16|0; return (c==='x'?r:(r&0x3|0x8)).toString(16);
-  });
-}
-
-async function marzCollect(phone, amount, description){
-  // Format phone: 07XXXXXXXX → +2567XXXXXXX
-  const formatted = '+256' + phone.slice(1);
-  const formData = new FormData();
-  formData.append('phone_number', formatted);
-  formData.append('amount', String(amount));
-  formData.append('country', 'UG');
-  formData.append('reference', generateUUID());
-  formData.append('description', description || 'DON-PESSA Deposit');
-  const res = await fetch(MARZ_BASE + '/collect-money', {
-    method: 'POST',
-    headers: { 'Authorization': MARZ_AUTH },
-    body: formData
-  });
-  return await res.json();
-}
-
-async function marzSendMoney(phone, amount, description){
-  const formatted = '+256' + phone.slice(1);
-  const formData = new FormData();
-  formData.append('phone_number', formatted);
-  formData.append('amount', String(amount));
-  formData.append('country', 'UG');
-  formData.append('reference', generateUUID());
-  formData.append('description', description || 'DON-PESSA Withdrawal');
-  const res = await fetch(MARZ_BASE + '/send-money', {
-    method: 'POST',
-    headers: { 'Authorization': MARZ_AUTH },
-    body: formData
-  });
-  return await res.json();
-}
-
+<script>
 // ── FIREBASE INIT ──
 const firebaseConfig = {
   apiKey: "AIzaSyAsW9rbAx4rJ_MjZF4sLzWoID11Ui6aaCs",
@@ -759,7 +775,6 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 // ── DB HELPERS ──
-const ref = (path) => db.ref(path);
 const dbGet = (path) => db.ref(path).get().then(s => s.val());
 const dbSet = (path, val) => db.ref(path).set(val);
 const dbUpdate = (path, val) => db.ref(path).update(val);
@@ -768,31 +783,51 @@ const dbPush = (path, val) => db.ref(path).push(val);
 // ── STATE ──
 let currentUser = null;
 let currentUsername = null;
-let dailyProfitTimer = null;
 let userListener = null;
-let settingsData = { uraTax:3.7, withdrawCharge:10, refL1:10, refL2:4, refL3:1, waGroup:'', waSupport:'', withdrawLocked:false };
+let selectedNetwork = null; // 'mtn' or 'airtel'
+let settingsData = {
+  uraTax: 3.7,
+  withdrawCharge: 10,
+  refL1: 10, refL2: 4, refL3: 1,
+  waGroup: '', waSupport: '',
+  withdrawLocked: false,
+  minDeposit: 10000,
+  marzApiKey: ''
+};
 
+const MARZ_API = 'https://wallet.wearemarz.com/api/v1';
 const tabMap = {home:'sec-home',history:'sec-history',team:'sec-team',plan:'sec-plan',profile:'sec-profile',deposit:'sec-deposit',withdraw:'sec-withdraw',reinvest:'sec-reinvest',support:'sec-support',company:'sec-company'};
 const navOrder = ['home','history','team','plan','profile'];
 
 function fmt(n){ return 'UGX '+Number(n||0).toLocaleString(); }
 function dateStr(){ const d=new Date(); return d.toLocaleDateString('en-UG',{day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-UG',{hour:'2-digit',minute:'2-digit'}); }
-function safeKey(username){ return username.replace(/[.#$\[\]]/g,'_'); }
+function safeKey(u){ return u.replace(/[.#$\[\]]/g,'_'); }
+function genUUID(){ return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16)); }
 
 let currentHistoryFilter = 'Deposit';
 
 // ── UI HELPERS ──
-function showAuth(id){ document.querySelectorAll('.auth-page').forEach(p=>{p.classList.remove('active');p.style.display='none';}); const t=document.getElementById(id); t.style.display='flex'; t.classList.add('active'); if(id==='register-page'){ const pr=sessionStorage.getItem('dw_pending_ref'); const ri=document.getElementById('reg-ref'); if(pr&&ri&&!ri.value) ri.value=pr; } }
-function showDashboard(){ document.querySelectorAll('.auth-page').forEach(p=>{p.classList.remove('active');p.style.display='none';}); document.getElementById('dashboard-page').style.display='block'; document.getElementById('dashboard-page').classList.add('active'); }
+function showAuth(id){
+  document.querySelectorAll('.auth-page').forEach(p=>{p.classList.remove('active');p.style.display='none';});
+  const t=document.getElementById(id); t.style.display='flex'; t.classList.add('active');
+  if(id==='register-page'){
+    const pr=sessionStorage.getItem('dw_pending_ref');
+    const ri=document.getElementById('reg-ref');
+    if(pr&&ri&&!ri.value) ri.value=pr;
+  }
+}
+function showDashboard(){
+  document.querySelectorAll('.auth-page').forEach(p=>{p.classList.remove('active');p.style.display='none';});
+  document.getElementById('dashboard-page').style.display='block';
+  document.getElementById('dashboard-page').classList.add('active');
+}
 function hideLoading(){ document.getElementById('loading-screen').style.display='none'; }
 function switchTab(tab){
-  // Block withdraw tab silently if locked
   if(tab==='withdraw' && settingsData.withdrawLocked) return;
   Object.values(tabMap).forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('active');});
   const t=document.getElementById(tabMap[tab]); if(t)t.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   const idx=navOrder.indexOf(tab); if(idx>=0)document.querySelectorAll('.nav-item')[idx].classList.add('active');
-  document.querySelectorAll('.menu-item').forEach(m=>m.classList.remove('active-menu'));
   closeMenu();
 }
 function menuNav(tab){ switchTab(tab); }
@@ -804,8 +839,6 @@ function closeModal(){ document.getElementById('modal-overlay').classList.remove
 function setErr(id,show,msg){ const el=document.getElementById(id); if(!el)return; if(msg)el.textContent=msg; el.style.display=show?'block':'none'; el.classList.toggle('show',show); }
 function clearErrors(...ids){ ids.forEach(id=>setErr(id,false)); }
 function toggleEye(inputId,btn){ const inp=document.getElementById(inputId); inp.type=inp.type==='password'?'text':'password'; btn.textContent=inp.type==='password'?'👁':'🙈'; }
-function updatePrefix(){ const c=document.getElementById('reg-country').value; document.getElementById('phone-prefix').textContent=c==='KE'?'+254':c==='UG'?'+256':'+???'; }
-function phoneInput(inp){ inp.value=inp.value.replace(/\D/g,'').slice(0,10); }
 function checkStrength(val){ const bars=['bar1','bar2','bar3','bar4'].map(id=>document.getElementById(id)); bars.forEach(b=>b.className='pw-bar'); if(!val)return; let s=0; if(val.length>=6)s++; if(val.length>=10)s++; if(/[A-Z]/.test(val)&&/[0-9]/.test(val))s++; if(/[^A-Za-z0-9]/.test(val))s++; const cls=s<=1?'weak':s===2?'medium':'strong'; for(let i=0;i<s;i++)bars[i].classList.add(cls); }
 function openWaGroup(){ if(settingsData.waGroup)window.open(settingsData.waGroup,'_blank'); else showToast('Group link not set yet','#f87171'); }
 function openWaSupport(){ if(settingsData.waSupport)window.open(settingsData.waSupport,'_blank'); else showToast('Support link not set yet','#f87171'); }
@@ -813,23 +846,135 @@ function toggleFaq(el){ const o=el.classList.contains('open'); document.querySel
 function copyRef(){ navigator.clipboard.writeText(document.getElementById('ref-url').textContent).catch(()=>{}); showToast('✓ Referral link copied!'); }
 function copyRef2(){ navigator.clipboard.writeText(document.getElementById('ref-url2').textContent).catch(()=>{}); showToast('✓ Referral link copied!'); }
 
+// ── WITHDRAW LOCK UI ──
 function applyWithdrawLock(){
   const locked = settingsData.withdrawLocked;
-  // Bottom nav withdraw button (2nd quick action — not in bottom nav but in action grid)
-  // Side menu withdraw item
   document.querySelectorAll('.menu-item').forEach(m=>{
     if(m.getAttribute('onclick')==="menuNav('withdraw')"){
       locked ? m.classList.add('withdraw-locked') : m.classList.remove('withdraw-locked');
     }
   });
-  // Home action grid withdraw button
   const wBtn = document.querySelector('.btn-withdraw');
   if(wBtn){ wBtn.style.opacity = locked?'0.35':'1'; wBtn.style.pointerEvents = locked?'none':'auto'; }
+  const lMsg = document.getElementById('withdraw-locked-msg');
+  if(lMsg) lMsg.style.display = locked?'block':'none';
+  const wChDisp = document.getElementById('with-charge-display');
+  if(wChDisp) wChDisp.textContent = (settingsData.withdrawCharge||10)+'%';
 }
 
-// ── UPDATE UI ──
+// ── PHONE INPUT HELPERS ──
+function updateRegPrefix(){
+  const c=document.getElementById('reg-country').value;
+  document.getElementById('reg-phone-prefix').textContent=c==='KE'?'+254':c==='UG'?'+256':'+???';
+  document.getElementById('reg-phone').value='';
+}
+function regPhoneInput(inp){ inp.value=inp.value.replace(/\D/g,'').slice(0,9); }
+function depPhoneInput(inp){ inp.value=inp.value.replace(/\D/g,'').slice(0,9); }
+
+// ── NETWORK SELECTOR ──
+function selectNetwork(net){
+  selectedNetwork = net;
+  document.getElementById('net-mtn').classList.toggle('selected', net==='mtn');
+  document.getElementById('net-airtel').classList.toggle('selected', net==='airtel');
+  setErr('dep-network-err', false);
+  // Enable phone and amount fields
+  const phoneInp = document.getElementById('dep-phone');
+  const amtInp = document.getElementById('dep-amount');
+  const phoneWrap = document.getElementById('dep-phone-wrap');
+  const submitBtn = document.getElementById('dep-submit-btn');
+  phoneInp.disabled = false;
+  amtInp.disabled = false;
+  phoneWrap.style.opacity = '1';
+  amtInp.style.opacity = '1';
+  submitBtn.disabled = false;
+  // Pre-fill with user's registered phone (last 9 digits)
+  if(currentUser && currentUser.phone){
+    const ph = currentUser.phone; // stored as +256XXXXXXXXX
+    const digits = ph.replace(/^\+256/, '');
+    if(digits.length===9) phoneInp.value = digits;
+  }
+}
+
+// ── PAYMENT STATUS OVERLAY ──
+function showPayStatus(icon, title, msg, showSpinner=true, progress=0){
+  document.getElementById('pso-icon').textContent = icon;
+  document.getElementById('pso-title').textContent = title;
+  document.getElementById('pso-msg').textContent = msg;
+  document.getElementById('pso-spinner').style.display = showSpinner?'block':'none';
+  document.getElementById('pso-progress').style.width = progress+'%';
+  document.getElementById('pay-status-overlay').classList.add('open');
+}
+function hidePayStatus(){ document.getElementById('pay-status-overlay').classList.remove('open'); }
+
+// ── MARZ API: COLLECT MONEY (DEPOSIT) ──
+async function marzCollect(phone, amount, reference, description){
+  const apiKey = settingsData.marzApiKey || '';
+  if(!apiKey){ throw new Error('Payment API not configured. Contact admin.'); }
+  const formData = new FormData();
+  formData.append('phone_number', phone);
+  formData.append('amount', String(amount));
+  formData.append('country', 'UG');
+  formData.append('reference', reference);
+  formData.append('description', description);
+  const response = await fetch(MARZ_API+'/collect-money', {
+    method: 'POST',
+    headers: { 'Authorization': 'Basic '+btoa(apiKey+':') },
+    body: formData
+  });
+  if(!response.ok) throw new Error('Payment gateway error: '+response.status);
+  return await response.json();
+}
+
+// ── MARZ API: SEND MONEY (WITHDRAWAL) ──
+async function marzSend(phone, amount, reference, description){
+  const apiKey = settingsData.marzApiKey || '';
+  if(!apiKey){ throw new Error('Payment API not configured. Contact admin.'); }
+  const formData = new FormData();
+  formData.append('phone_number', phone);
+  formData.append('amount', String(amount));
+  formData.append('country', 'UG');
+  formData.append('reference', reference);
+  formData.append('description', description);
+  const response = await fetch(MARZ_API+'/send-money', {
+    method: 'POST',
+    headers: { 'Authorization': 'Basic '+btoa(apiKey+':') },
+    body: formData
+  });
+  if(!response.ok) throw new Error('Payment gateway error: '+response.status);
+  return await response.json();
+}
+
+// ── MARZ API: CHECK TRANSACTION STATUS ──
+async function marzCheckStatus(uuid, type){
+  const apiKey = settingsData.marzApiKey || '';
+  const endpoint = type==='collect' ? '/collect-money/'+uuid : '/send-money/'+uuid;
+  const response = await fetch(MARZ_API+endpoint, {
+    headers: { 'Authorization': 'Basic '+btoa(apiKey+':') }
+  });
+  if(!response.ok) return null;
+  return await response.json();
+}
+
+// ── POLL FOR PAYMENT CONFIRMATION ──
+async function pollPaymentStatus(uuid, type, maxAttempts=18, intervalMs=5000){
+  for(let i=0;i<maxAttempts;i++){
+    await new Promise(r=>setTimeout(r, intervalMs));
+    const progress = Math.min(95, ((i+1)/maxAttempts)*100);
+    document.getElementById('pso-progress').style.width = progress+'%';
+    try{
+      const result = await marzCheckStatus(uuid, type);
+      if(!result) continue;
+      const status = result?.data?.transaction?.status || result?.status || '';
+      if(status==='successful' || status==='success') return 'success';
+      if(status==='failed' || status==='cancelled') return 'failed';
+    } catch(e){ /* continue polling */ }
+  }
+  return 'timeout';
+}
+
+// ── BALANCE UI ──
 function updateBalanceUI(){
-  if(!currentUser)return;
+  if(!currentUser) return;
   document.getElementById('stat-invested').textContent=fmt(currentUser.invested);
   document.getElementById('stat-balance').textContent=fmt(currentUser.balance);
   document.getElementById('stat-withdrawn').textContent=fmt(currentUser.withdrawn);
@@ -857,7 +1002,7 @@ function renderHistory(){
 }
 
 function renderTeam(){
-  if(!currentUser)return;
+  if(!currentUser) return;
   document.getElementById('ref-pct-l1-display').textContent=settingsData.refL1+'%';
   document.getElementById('ref-pct-l2-display').textContent=settingsData.refL2+'%';
   document.getElementById('ref-pct-l3-display').textContent=settingsData.refL3+'%';
@@ -880,7 +1025,7 @@ function renderTeam(){
 function startUserListener(username){
   if(userListener){ db.ref('users/'+safeKey(username)).off('value',userListener); }
   userListener = db.ref('users/'+safeKey(username)).on('value', snap=>{
-    if(!snap.exists())return;
+    if(!snap.exists()) return;
     currentUser = snap.val();
     updateBalanceUI();
     renderHistory();
@@ -894,7 +1039,14 @@ function startSettingsListener(){
     if(snap.exists()){ settingsData=snap.val(); }
     if(currentUser){ renderTeam(); }
     applyWithdrawLock();
+    updateDepMinNote();
   });
+}
+
+function updateDepMinNote(){
+  const minDep = settingsData.minDeposit || 10000;
+  const note = document.getElementById('dep-min-note');
+  if(note) note.innerHTML = `✅ Minimum deposit is <strong>${fmt(minDep)}</strong>. Select your network first, then enter phone and amount.`;
 }
 
 // ── APP INIT ──
@@ -947,7 +1099,8 @@ function loadDashboard(){
   const u=currentUser;
   const ctry=u.country==='KE'?'🇰🇪 Kenya':'🇺🇬 Uganda';
   document.getElementById('dash-username').textContent=u.username;
-  const siteBase=window.location.origin+window.location.pathname.replace(/\/[^\/]*$/,'/'); document.getElementById('ref-url').textContent=siteBase+'?ref='+encodeURIComponent(u.username);
+  const siteBase=window.location.origin+window.location.pathname.replace(/\/[^\/]*$/,'/');
+  document.getElementById('ref-url').textContent=siteBase+'?ref='+encodeURIComponent(u.username);
   document.getElementById('ref-url2').textContent=siteBase+'?ref='+encodeURIComponent(u.username);
   document.getElementById('profile-name').textContent=u.username;
   document.getElementById('profile-user').textContent=u.username;
@@ -958,32 +1111,40 @@ function loadDashboard(){
   document.getElementById('profile-since').textContent=u.joinedDate||'2025';
   hideLoading();
   updateBalanceUI(); renderHistory(); renderTeam();
+  updateDepMinNote();
 }
 
 // ── REGISTER ──
 async function doRegister(){
-  clearErrors('reg-user-err','reg-country-err','reg-phone-err','reg-pw-err','reg-confirm-err');
+  clearErrors('reg-user-err','reg-country-err','reg-phone-err','reg-pw-err','reg-confirm-err','reg-general-err');
   const username=document.getElementById('reg-username').value.trim();
   const country=document.getElementById('reg-country').value;
-  const phone=document.getElementById('reg-phone').value.trim();
+  const phoneDigits=document.getElementById('reg-phone').value.trim();
   const refCode=document.getElementById('reg-ref').value.trim();
   const password=document.getElementById('reg-password').value;
   const confirm=document.getElementById('reg-confirm').value;
   let ok=true;
   if(!username){setErr('reg-user-err',true);ok=false;}
   if(!country){setErr('reg-country-err',true);ok=false;}
-  if(!phone||phone.length!==10||!phone.startsWith('07')){setErr('reg-phone-err',true);ok=false;}
+  // Phone: 9 digits starting with 7
+  if(!phoneDigits||phoneDigits.length!==9||!phoneDigits.startsWith('7')){
+    setErr('reg-phone-err',true,'Enter 9 digits starting with 7 (e.g. 712345678)');ok=false;
+  }
   if(!password||password.length<6){setErr('reg-pw-err',true);ok=false;}
   if(!confirm||confirm!==password){setErr('reg-confirm-err',true);ok=false;}
   if(!ok)return;
+  // Build full phone number
+  const prefix = country==='KE'?'+254':'+256';
+  const fullPhone = prefix + phoneDigits;
   try{
     const existing = await dbGet('users/'+safeKey(username));
     if(existing){setErr('reg-user-err',true,'Username already taken');return;}
     const now=dateStr();
     const newUser={
-      username,password,country,phone,
-      balance:4000,invested:0,withdrawn:0,refEarned:0,
-      activated:false,locked:false,
+      username, password, country,
+      phone: fullPhone,
+      balance:4000, invested:0, withdrawn:0, refEarned:0,
+      activated:false, locked:false,
       referredBy:refCode||null,
       joinedDate:new Date().getFullYear().toString(),
       transactions:{ t0:{type:'Bonus',amount:4000,note:'Registration Bonus',date:now} },
@@ -1008,45 +1169,36 @@ async function doRegister(){
     }
     showToast('✓ Account created! UGX 4,000 bonus added 🎁');
     ['reg-username','reg-phone','reg-password','reg-confirm','reg-ref'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('reg-country').value=''; updatePrefix(); checkStrength('');
+    document.getElementById('reg-country').value=''; updateRegPrefix(); checkStrength('');
     setTimeout(()=>showAuth('login-page'),1200);
   } catch(e){ setErr('reg-general-err',true,'❌ Registration failed. Try again.'); console.error(e); }
 }
 
-// ── FIX 2: DATE-BASED DAILY PROFIT ──
+// ── DAILY PROFIT ──
 function getDateKey(d){ return d.toISOString().slice(0,10); }
 function addDays(d,n){ const r=new Date(d); r.setUTCDate(r.getUTCDate()+n); return r; }
 
 async function runDailyProfits(){
-  if(!currentUser||!currentUsername)return;
+  if(!currentUser||!currentUsername) return;
   const deposits=currentUser.deposits?Object.entries(currentUser.deposits):[];
-  if(!deposits.length)return;
+  if(!deposits.length) return;
   const todayKey=getDateKey(new Date());
   const updates={};
   let newBalance=currentUser.balance||0;
   let anyPaid=false;
-
   for(const [key,dep] of deposits){
     let daysRun=dep.daysRun||0;
-    if(daysRun>=60)continue;
-    // last paid date: either stored or the deposit start date
+    if(daysRun>=60) continue;
     const startDate=new Date(dep.startDate);
     const lastPaid=dep.lastPaidDate||getDateKey(startDate);
-    // next day to pay = day after lastPaid
     let cursor=addDays(new Date(lastPaid),1);
     while(getDateKey(cursor)<=todayKey && daysRun<60){
       const dateKey=getDateKey(cursor);
       const profit=Math.floor(dep.amount*0.10);
       newBalance+=profit;
       const txKey='txp_'+dateKey.replace(/-/g,'')+'_'+key.slice(-5);
-      updates['transactions/'+txKey]={
-        type:'Profit',
-        amount:profit,
-        note:'Daily 10% profit — Day '+(daysRun+1)+'/60',
-        date:dateKey+' 00:00'
-      };
-      daysRun++;
-      anyPaid=true;
+      updates['transactions/'+txKey]={type:'Profit',amount:profit,note:'Daily 10% profit — Day '+(daysRun+1)+'/60',date:dateKey+' 00:00'};
+      daysRun++; anyPaid=true;
       cursor=addDays(cursor,1);
     }
     if(daysRun>(dep.daysRun||0)){
@@ -1057,65 +1209,153 @@ async function runDailyProfits(){
   if(anyPaid){
     updates['balance']=newBalance;
     await dbUpdate('users/'+safeKey(currentUsername),updates);
-    // silent — no toast, user just sees balance and history update
   }
 }
 function startDailyProfitTimer(){ runDailyProfits(); }
-function stopDailyProfitTimer(){}
 
 // ── LOGOUT ──
 function doLogout(){
-  stopDailyProfitTimer();
   stopProofEngine();
   if(userListener&&currentUsername){ db.ref('users/'+safeKey(currentUsername)).off('value',userListener); userListener=null; }
   sessionStorage.removeItem('dw_current_user');
-  currentUser=null; currentUsername=null;
+  currentUser=null; currentUsername=null; selectedNetwork=null;
   closeMenu();
   showToast('Signed out','#f87171');
-  setTimeout(()=>{ document.getElementById('dashboard-page').style.display='none'; document.getElementById('dashboard-page').classList.remove('active'); document.getElementById('login-username').value=''; document.getElementById('login-password').value=''; showAuth('login-page'); },800);
+  setTimeout(()=>{
+    document.getElementById('dashboard-page').style.display='none';
+    document.getElementById('dashboard-page').classList.remove('active');
+    document.getElementById('login-username').value='';
+    document.getElementById('login-password').value='';
+    showAuth('login-page');
+  },800);
 }
 
-// ── DEPOSIT ──
+// ── DEPOSIT (AUTO via MarzPay) ──
 async function doDeposit(){
-  clearErrors('dep-amount-err','dep-phone-err');
-  const amount=parseInt(document.getElementById('dep-amount').value)||0;
-  const phone=document.getElementById('dep-phone').value.trim();
-  if(amount<10000){setErr('dep-amount-err',true,'Minimum deposit is UGX 10,000');return;}
-  if(!phone||phone.length!==10||!phone.startsWith('07')){setErr('dep-phone-err',true,'Phone must be 10 digits starting with 07');return;}
-  const taxAmt=Math.round(amount*(settingsData.uraTax/100));
-  const totalSent=amount+taxAmt;
+  clearErrors('dep-network-err','dep-phone-err','dep-amount-err');
+  const minDep = settingsData.minDeposit || 10000;
 
-  // Show loading state
-  const btn=document.querySelector('#sec-deposit .green-btn');
-  const origText=btn.textContent; btn.textContent='⏳ Processing...'; btn.disabled=true;
+  // Validate network
+  if(!selectedNetwork){ setErr('dep-network-err',true,'Please select MTN or Airtel first'); return; }
+
+  // Validate phone
+  const phoneDigits = document.getElementById('dep-phone').value.trim();
+  if(!phoneDigits || phoneDigits.length!==9 || !phoneDigits.startsWith('7')){
+    setErr('dep-phone-err',true,'Enter 9 digits starting with 7');
+    return;
+  }
+  const fullPhone = '+256' + phoneDigits;
+
+  // Validate amount
+  const amount = parseInt(document.getElementById('dep-amount').value)||0;
+  if(amount < minDep){
+    setErr('dep-amount-err',true,'Minimum deposit is '+fmt(minDep));
+    return;
+  }
+
+  // Check API key
+  if(!settingsData.marzApiKey){
+    showModal('⚠️','API Not Configured','Automatic payments are not yet set up. Please contact admin.');
+    return;
+  }
+
+  const reference = genUUID();
+  const netLabel = selectedNetwork==='mtn'?'MTN Mobile Money':'Airtel Money';
 
   try{
-    // Call MarzPay collect-money API — sends USSD prompt to user's phone
-    const marzRes = await marzCollect(phone, totalSent, 'DON-PESSA Deposit — '+currentUsername);
+    // Show processing overlay
+    showPayStatus('📱','Sending Payment Request','A USSD prompt will appear on your phone. Approve it with your mobile money PIN.',true,5);
 
-    if(marzRes.status === 'success'){
-      const marzRef = marzRes.data?.transaction?.uuid || '';
-      // Delete any existing pending deposit for this user
-      const qSnap=await db.ref('deposit_queue').get();
-      if(qSnap.exists()){
-        const qData=qSnap.val();
-        const deletes=Object.entries(qData)
-          .filter(([k,v])=>v.username===currentUsername&&v.status==='pending')
-          .map(([k])=>db.ref('deposit_queue/'+k).remove());
-        await Promise.all(deletes);
-      }
-      await dbPush('deposit_queue',{username:currentUsername,phone,amount,totalSent,date:dateStr(),status:'pending',marzRef});
+    const result = await marzCollect(fullPhone, amount, reference, 'DON-PESSA Deposit — '+netLabel);
+
+    if(result.status !== 'success'){
+      hidePayStatus();
+      showModal('❌','Payment Failed', result.message || 'Payment could not be initiated. Check your number and try again.');
+      return;
+    }
+
+    const txUuid = result?.data?.transaction?.uuid;
+    showPayStatus('📲','Waiting for Approval','Check your phone and enter your mobile money PIN to approve the payment.',true,15);
+
+    // Poll for confirmation
+    const pollResult = await pollPaymentStatus(txUuid, 'collect');
+
+    if(pollResult === 'success'){
+      // ── CREDIT USER BALANCE ──
+      const profit = Math.floor(amount*0.10);
+      const newBalance = (currentUser.balance||0) + profit;
+      const newInvested = (currentUser.invested||0) + amount;
+      const depKey = 'dep_'+Date.now();
+      const tx1 = 'tx_'+Date.now()+'a';
+      const tx2 = 'tx_'+Date.now()+'b';
+      const updates = {};
+      updates['users/'+safeKey(currentUsername)+'/activated'] = true;
+      updates['users/'+safeKey(currentUsername)+'/invested'] = newInvested;
+      updates['users/'+safeKey(currentUsername)+'/balance'] = newBalance;
+      updates['users/'+safeKey(currentUsername)+'/deposits/'+depKey] = {amount, startDate:Date.now(), daysRun:0};
+      updates['users/'+safeKey(currentUsername)+'/transactions/'+tx1] = {type:'Deposit',amount,note:netLabel+' — Auto Confirmed',date:dateStr()};
+      updates['users/'+safeKey(currentUsername)+'/transactions/'+tx2] = {type:'Profit',amount:profit,note:'10% instant profit on deposit',date:dateStr()};
+      await db.ref().update(updates);
+
+      // Pay referral bonuses
+      await payReferralBonus(currentUsername, amount);
+
+      hidePayStatus();
       document.getElementById('dep-amount').value='';
       document.getElementById('dep-phone').value='';
-      showModal('📱','Check Your Phone','A payment prompt has been sent to your phone. Approve it with your mobile money PIN to complete the deposit.');
+      selectedNetwork=null;
+      document.getElementById('net-mtn').classList.remove('selected');
+      document.getElementById('net-airtel').classList.remove('selected');
+      // Disable fields again
+      document.getElementById('dep-phone').disabled=true;
+      document.getElementById('dep-amount').disabled=true;
+      document.getElementById('dep-phone-wrap').style.opacity='0.45';
+      document.getElementById('dep-amount').style.opacity='0.45';
+      document.getElementById('dep-submit-btn').disabled=true;
+
+      showModal('✅','Deposit Confirmed!','UGX '+amount.toLocaleString()+' deposited successfully. +'+fmt(profit)+' instant profit added to your balance!');
+
+    } else if(pollResult === 'failed'){
+      hidePayStatus();
+      showModal('❌','Payment Declined','The payment was declined or cancelled. Please try again.');
     } else {
-      const errMsg = marzRes.message || 'Payment request failed. Try again.';
-      showModal('❌','Payment Failed', errMsg);
+      hidePayStatus();
+      showModal('⏳','Payment Pending','We could not confirm your payment yet. Check your transaction history in a few minutes. If balance is not updated, contact support.');
     }
+
   } catch(e){
-    showToast('❌ Network error. Try again.','#f87171');
-  } finally {
-    btn.textContent=origText; btn.disabled=false;
+    hidePayStatus();
+    showModal('❌','Error', e.message || 'Something went wrong. Please try again.');
+    console.error(e);
+  }
+}
+
+// ── PAY REFERRAL BONUSES ──
+async function payReferralBonus(depositorUsername, amount){
+  const snap=await db.ref('users/'+safeKey(depositorUsername)).get();
+  if(!snap.exists()) return;
+  const depositor=snap.val();
+  if(!depositor.referredBy) return;
+  const pcts=[settingsData.refL1/100, settingsData.refL2/100, settingsData.refL3/100];
+  let uplineUsername=depositor.referredBy;
+  for(let i=0;i<3;i++){
+    if(!uplineUsername) break;
+    const uSnap=await db.ref('users/'+safeKey(uplineUsername)).get();
+    if(!uSnap.exists()) break;
+    const upline=uSnap.val();
+    const bonus=Math.floor(amount*pcts[i]);
+    if(bonus<=0){ uplineUsername=upline.referredBy||null; continue; }
+    const txKey='tx_'+Date.now()+'_ref'+i;
+    const updates={};
+    updates['users/'+safeKey(uplineUsername)+'/balance']=(upline.balance||0)+bonus;
+    updates['users/'+safeKey(uplineUsername)+'/refEarned']=(upline.refEarned||0)+bonus;
+    updates['users/'+safeKey(uplineUsername)+'/transactions/'+txKey]={type:'Referral',amount:bonus,note:`Level ${i+1} bonus from ${depositorUsername}`,date:dateStr()};
+    const refSnap=await db.ref('users/'+safeKey(uplineUsername)+'/referrals/'+safeKey(depositorUsername)).get();
+    if(refSnap.exists()){
+      updates['users/'+safeKey(uplineUsername)+'/referrals/'+safeKey(depositorUsername)+'/invested']=(refSnap.val().invested||0)+amount;
+    }
+    await db.ref().update(updates);
+    uplineUsername=upline.referredBy||null;
   }
 }
 
@@ -1150,41 +1390,103 @@ function calcWithdraw(){
   document.getElementById('with-receive').textContent=amount>0?`${fmt(net)} (after ${settingsData.withdrawCharge}% charge)`:'UGX 0';
 }
 
-// ── WITHDRAW ──
+// ── WITHDRAW (AUTO via MarzPay) ──
 async function doWithdraw(){
   clearErrors('with-amount-err');
-  if(settingsData.withdrawLocked){return;}
-  if(!currentUser.activated){showModal('🔒','Account Not Activated','Make a deposit first to activate your account.');return;}
+  if(settingsData.withdrawLocked){ return; }
+  if(!currentUser.activated){ showModal('🔒','Account Not Activated','Make a deposit first to activate your account.'); return; }
   const amount=parseInt(document.getElementById('with-amount').value)||0;
-  if(amount<5000){setErr('with-amount-err',true,'Minimum withdrawal is UGX 5,000');return;}
-  if((currentUser.balance||0)<amount){setErr('with-amount-err',true,'Insufficient balance');return;}
+  if(amount<5000){ setErr('with-amount-err',true,'Minimum withdrawal is UGX 5,000'); return; }
+  if((currentUser.balance||0)<amount){ setErr('with-amount-err',true,'Insufficient balance'); return; }
   const charge=Math.floor(amount*(settingsData.withdrawCharge/100));
   const net=amount-charge;
+  const userPhone = currentUser.phone;
+  if(!userPhone){ showModal('❌','No Phone Number','Your account has no registered phone number. Contact support.'); return; }
+
+  if(!settingsData.marzApiKey){
+    showModal('⚠️','API Not Configured','Automatic withdrawals are not yet set up. Please contact admin.');
+    return;
+  }
+
+  const reference = genUUID();
+
   try{
-    const txKey='tx_'+Date.now();
-    const newBalance=(currentUser.balance||0)-amount;
+    // Deduct balance immediately
+    const newBalance = (currentUser.balance||0) - amount;
+    const txKey = 'tx_'+Date.now();
     await dbUpdate('users/'+safeKey(currentUsername),{
-      balance:newBalance,
-      ['transactions/'+txKey]:{type:'Withdrawal',amount:-amount,note:'Pending review',date:dateStr(),status:'pending',txKey}
+      balance: newBalance,
+      ['transactions/'+txKey]:{type:'Withdrawal',amount:-amount,note:'Processing...',date:dateStr(),status:'pending',txKey}
     });
-    await dbPush('withdraw_queue',{username:currentUsername,phone:currentUser.phone,requestedAmount:amount,netAmount:net,charge,date:dateStr(),status:'pending',txKey});
-    document.getElementById('with-amount').value='';
-    document.getElementById('with-receive').textContent='UGX 0';
-    showModal('✅','Withdrawal Submitted','You will receive your funds shortly. Thank you.');
-  } catch(e){ showToast('❌ Failed. Try again.','#f87171'); }
+
+    showPayStatus('💸','Sending Your Funds','Processing withdrawal to '+userPhone,true,10);
+
+    const result = await marzSend(userPhone, net, reference, 'DON-PESSA Withdrawal');
+
+    if(result.status !== 'success'){
+      // Refund
+      await dbUpdate('users/'+safeKey(currentUsername),{
+        balance:(currentUser.balance||0),
+        ['transactions/'+txKey+'/status']:'failed',
+        ['transactions/'+txKey+'/note']:'Withdrawal Failed — Refunded'
+      });
+      hidePayStatus();
+      showModal('❌','Withdrawal Failed', result.message || 'Could not process withdrawal. Your balance has been refunded.');
+      return;
+    }
+
+    const txUuid = result?.data?.transaction?.uuid;
+    showPayStatus('💸','Sending Money','Transferring funds to your mobile money account...',true,30);
+
+    const pollResult = await pollPaymentStatus(txUuid, 'send');
+
+    if(pollResult === 'success'){
+      const updates = {};
+      updates['users/'+safeKey(currentUsername)+'/withdrawn'] = (currentUser.withdrawn||0)+net;
+      updates['users/'+safeKey(currentUsername)+'/transactions/'+txKey+'/status'] = 'approved';
+      updates['users/'+safeKey(currentUsername)+'/transactions/'+txKey+'/note'] = 'Withdrawal Successful — '+fmt(net)+' sent';
+      await db.ref().update(updates);
+      hidePayStatus();
+      document.getElementById('with-amount').value='';
+      document.getElementById('with-receive').textContent='UGX 0';
+      showModal('✅','Withdrawal Sent!','UGX '+net.toLocaleString()+' has been sent to '+userPhone+'. Check your mobile money.');
+    } else if(pollResult === 'failed'){
+      // Refund
+      await dbUpdate('users/'+safeKey(currentUsername),{
+        balance:(currentUser.balance||0),
+        ['transactions/'+txKey+'/status']:'failed',
+        ['transactions/'+txKey+'/note']:'Withdrawal Failed — Refunded'
+      });
+      hidePayStatus();
+      showModal('❌','Transfer Failed','Funds could not be sent. Your balance has been refunded. Contact support if this persists.');
+    } else {
+      // Timeout — mark pending, check later
+      await dbUpdate('users/'+safeKey(currentUsername),{
+        ['transactions/'+txKey+'/status']:'pending',
+        ['transactions/'+txKey+'/note']:'Withdrawal processing — check later'
+      });
+      hidePayStatus();
+      showModal('⏳','Processing','Your withdrawal is being processed. Funds should arrive shortly. Check your transaction history.');
+    }
+
+  } catch(e){
+    hidePayStatus();
+    showModal('❌','Error', e.message || 'Something went wrong. Contact support.');
+    console.error(e);
+  }
 }
 
-// ── FAQ TOGGLE ──
+// ── FAQ ──
 function toggleFaq(el){ const o=el.classList.contains('open'); document.querySelectorAll('.faq-item').forEach(f=>f.classList.remove('open')); if(!o)el.classList.add('open'); }
 
-// ── FIX 4: AUTO-READ ?ref= FROM URL ──
+// ── AUTO-READ ?ref= FROM URL ──
 (function(){
   const params=new URLSearchParams(window.location.search);
   const ref=params.get('ref');
   if(ref) sessionStorage.setItem('dw_pending_ref',ref);
 })();
 
-// ── FIX 1: SOCIAL PROOF ENGINE ──
+// ── SOCIAL PROOF ENGINE ──
 const PROOF_NAMES=['Musa','Aisha','Tom','Grace','David','Koreen','Brian','Sarah','Joseph','Fatuma','Peter','Alice','Robert','Hawa','Emmanuel','Lydia','Hassan','Annet','Patrick','Zainab','Ronald','Mercy','Ivan','Proscovia','Alex','Nakato','Moses','Harriet','Julius','Flavia','Daniel','Aida','Geoffrey','Winnie','Samuel'];
 const PROOF_EMOJIS=['👨🏾','👩🏽','👦🏿','👧🏾','🧑🏽','👨🏿','👩🏾','👦🏽','🧑🏿'];
 const PROOF_AMTS=[10000,15000,20000,25000,30000,50000,75000,100000,150000,200000,250000,300000,500000];
@@ -1193,14 +1495,7 @@ function fmtP(n){ return 'UGX '+Number(n).toLocaleString(); }
 function rnd(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 function genProof(){
   const name=rnd(PROOF_NAMES); const amt=rnd(PROOF_AMTS); const t=Math.floor(Math.random()*6);
-  const msgs=[
-    'registered & got UGX 4,000 bonus 🎁',
-    'invested '+fmtP(amt)+' 🚀',
-    'earned '+fmtP(Math.floor(amt*.1))+' referral bonus 🔗',
-    'withdrawn '+fmtP(Math.floor(amt*.9))+' 💸',
-    're-invested '+fmtP(amt)+' 🔄',
-    'earned daily profit '+fmtP(Math.floor(amt*.1))+' 📈'
-  ];
+  const msgs=['registered & got UGX 4,000 bonus 🎁','invested '+fmtP(amt)+' 🚀','earned '+fmtP(Math.floor(amt*.1))+' referral bonus 🔗','withdrawn '+fmtP(Math.floor(amt*.9))+' 💸','re-invested '+fmtP(amt)+' 🔄','earned daily profit '+fmtP(Math.floor(amt*.1))+' 📈'];
   return {name, msg:msgs[t], emoji:rnd(PROOF_EMOJIS)};
 }
 let proofTimer=null;
@@ -1209,7 +1504,7 @@ function startProofEngine(){
   const nameEl=document.getElementById('proof-name');
   const msgEl=document.getElementById('proof-msg');
   const avEl=document.getElementById('proof-av');
-  if(!card)return;
+  if(!card) return;
   function next(){
     const d=genProof();
     nameEl.textContent=d.name; msgEl.textContent=d.msg; avEl.textContent=d.emoji;

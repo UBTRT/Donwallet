@@ -87,13 +87,18 @@
   .settings-title{font-size:15px;font-weight:800;margin-bottom:4px;}
   .settings-sub{font-size:12px;color:var(--muted);margin-bottom:20px;}
   .settings-row{display:flex;align-items:center;gap:16px;margin-bottom:14px;flex-wrap:wrap;}
-  .settings-label{font-size:12px;font-weight:700;color:var(--muted);min-width:180px;}
+  .settings-label{font-size:12px;font-weight:700;color:var(--muted);min-width:200px;}
   .settings-input{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-family:'Syne',sans-serif;font-size:13px;color:var(--text);outline:none;transition:.2s;flex:1;min-width:200px;}
   .settings-input:focus{border-color:var(--accent);}
+  .settings-input.mono-input{font-family:'Space Mono',monospace;font-size:12px;}
   .pct-group{display:flex;align-items:center;gap:8px;}
   .pct-input{width:80px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-family:'Space Mono',monospace;font-size:13px;color:var(--text);outline:none;transition:.2s;text-align:center;}
   .pct-input:focus{border-color:var(--accent);}
   .pct-label{font-size:12px;color:var(--muted);}
+  .ugx-group{display:flex;align-items:center;gap:8px;}
+  .ugx-label{font-size:12px;color:var(--muted);font-weight:700;}
+  .ugx-input{width:140px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-family:'Space Mono',monospace;font-size:13px;color:var(--text);outline:none;transition:.2s;text-align:right;}
+  .ugx-input:focus{border-color:var(--accent);}
   .danger-zone{background:rgba(220,38,38,.05);border:1px solid rgba(220,38,38,.2);border-radius:16px;padding:24px;margin-bottom:20px;}
   .danger-title{font-size:15px;font-weight:800;color:var(--warn);margin-bottom:4px;}
   .danger-sub{font-size:12px;color:var(--muted);margin-bottom:20px;}
@@ -119,13 +124,17 @@
   .pct-summary{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;}
   .pct-pill{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;}
   .pct-pill span{color:var(--accent);font-weight:800;}
-
-  /* FIX 3: INLINE PASSWORD EDIT */
   .pw-cell{display:flex;align-items:center;gap:6px;}
   .pw-val{font-family:'Space Mono',monospace;font-size:11px;color:var(--gold);background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:6px;padding:3px 8px;cursor:pointer;transition:.2s;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .pw-val:hover{background:rgba(251,191,36,.18);}
   .pw-edit-input{font-family:'Space Mono',monospace;font-size:11px;color:var(--text);background:var(--surface2);border:1px solid var(--accent);border-radius:6px;padding:3px 8px;outline:none;width:120px;}
   .pw-save-btn{background:rgba(52,211,153,.2);border:1px solid rgba(52,211,153,.3);color:var(--accent3);border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer;}
+  .api-key-wrap{display:flex;align-items:center;gap:8px;flex:1;min-width:200px;}
+  .api-key-toggle{background:none;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:14px;cursor:pointer;color:var(--muted);transition:.2s;flex-shrink:0;}
+  .api-key-toggle:hover{color:var(--accent);}
+  .api-status-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;}
+  .api-status-badge.set{background:rgba(52,211,153,.15);color:var(--accent3);}
+  .api-status-badge.notset{background:rgba(248,113,113,.15);color:var(--warn);}
   .loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:16px;}
   .loading-spinner{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -168,8 +177,6 @@
     </div>
     <div class="sidebar-nav">
       <div class="nav-item active" onclick="showPage('pg-dashboard')"><span class="nav-icon">📊</span><span>Dashboard</span></div>
-      <div class="nav-item" onclick="showPage('pg-deposits')"><span class="nav-icon">💳</span><span>Deposits</span><span class="nav-badge" id="dep-badge">0</span></div>
-      <div class="nav-item" onclick="showPage('pg-withdrawals')"><span class="nav-icon">💸</span><span>Withdrawals</span><span class="nav-badge" id="with-badge">0</span></div>
       <div class="nav-item" onclick="showPage('pg-users')"><span class="nav-icon">👥</span><span>Users</span></div>
       <div class="nav-item" onclick="showPage('pg-tube')"><span class="nav-icon">🎯</span><span>Tube</span></div>
       <div class="nav-item" onclick="showPage('pg-debit')"><span class="nav-icon">💳</span><span>Debit Loan</span></div>
@@ -180,6 +187,7 @@
     </div>
   </div>
   <div class="main-content">
+
     <!-- DASHBOARD -->
     <div class="page active" id="pg-dashboard">
       <div class="page-title">Dashboard</div>
@@ -192,32 +200,12 @@
         <div class="stat-card"><div class="stat-card-label">Ref Earned</div><div class="stat-card-val purple" id="d-total-earned">—</div></div>
       </div>
       <div class="pct-summary" id="pct-summary"></div>
-      <div class="stats-row" style="grid-template-columns:repeat(3,1fr)">
-        <div class="stat-card"><div class="stat-card-label">Pending Deposits</div><div class="stat-card-val gold" id="d-pend-dep">—</div></div>
-        <div class="stat-card"><div class="stat-card-label">Pending Withdrawals</div><div class="stat-card-val gold" id="d-pend-with">—</div></div>
+      <div class="stats-row" style="grid-template-columns:repeat(2,1fr)">
         <div class="stat-card"><div class="stat-card-label">Locked Users</div><div class="stat-card-val red" id="d-locked">—</div></div>
+        <div class="stat-card"><div class="stat-card-label">Min Deposit</div><div class="stat-card-val gold" id="d-min-deposit">—</div></div>
       </div>
     </div>
-    <!-- DEPOSITS -->
-    <div class="page" id="pg-deposits">
-      <div class="page-title">Deposit Requests</div>
-      <div class="page-sub">Approve or reject incoming deposit requests</div>
-      <div class="table-wrap">
-        <div class="table-header"><div class="table-title">💳 Pending Deposits</div></div>
-        <table><thead><tr><th>Username</th><th>Phone</th><th>User Amount</th><th>Total Charged (+tax)</th><th>Date & Time</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody id="dep-table-body"><tr class="empty-row"><td colspan="7">Loading...</td></tr></tbody></table>
-      </div>
-    </div>
-    <!-- WITHDRAWALS -->
-    <div class="page" id="pg-withdrawals">
-      <div class="page-title">Withdrawal Requests</div>
-      <div class="page-sub">Approve or reject withdrawal requests</div>
-      <div class="table-wrap">
-        <div class="table-header"><div class="table-title">💸 Pending Withdrawals</div></div>
-        <table><thead><tr><th>Username</th><th>Phone</th><th>Requested</th><th>Net to Pay</th><th>Date & Time</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody id="with-table-body"><tr class="empty-row"><td colspan="7">Loading...</td></tr></tbody></table>
-      </div>
-    </div>
+
     <!-- USERS -->
     <div class="page" id="pg-users">
       <div class="page-title">Users</div>
@@ -228,15 +216,17 @@
           <input type="text" class="f-input" style="width:220px;padding:8px 14px;" placeholder="🔍 Search username..." oninput="filterUsers(this.value)">
         </div>
         <table><thead><tr><th>Username</th><th>Phone</th><th>Password</th><th>Balance</th><th>Invested</th><th>Withdrawn</th><th>Referrals</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody id="users-table-body"><tr class="empty-row"><td colspan="8">Loading...</td></tr></tbody></table>
+        <tbody id="users-table-body"><tr class="empty-row"><td colspan="9">Loading...</td></tr></tbody></table>
       </div>
     </div>
+
     <!-- TUBE -->
     <div class="page" id="pg-tube">
       <div class="page-title">Tube</div>
       <div class="page-sub">Active investors — users who have made deposits</div>
       <div class="tube-grid" id="tube-grid"><p style="color:var(--muted);font-size:13px">Loading...</p></div>
     </div>
+
     <!-- DEBIT LOAN -->
     <div class="page" id="pg-debit">
       <div class="page-title">Debit Loan</div>
@@ -267,7 +257,7 @@
             <label class="f-label">Amount to Debit (UGX)</label>
             <div class="f-wrap"><span class="f-icon">💸</span><input type="number" class="f-input" id="debit-amount" placeholder="Enter amount e.g. 1000" min="1" oninput="updateDebitPreview()"></div>
           </div>
-          <div id="debit-preview" style="display:none;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--warn);" id="debit-preview"></div>
+          <div id="debit-preview" style="display:none;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--warn);"></div>
           <button class="btn btn-danger" style="width:100%;padding:14px;font-size:14px;" onclick="processDebit()">💳 PROCESS DEBIT</button>
         </div>
       </div>
@@ -285,23 +275,71 @@
     <div class="page" id="pg-settings">
       <div class="page-title">Settings</div>
       <div class="page-sub">Configure platform settings</div>
+
+      <!-- MarzPay API -->
+      <div class="settings-section">
+        <div class="settings-title">🔑 MarzPay Payment API</div>
+        <div class="settings-sub">Enter your MarzPay API key to enable automatic deposits and withdrawals. Get it from your MarzPay dashboard → Developer → API Keys.</div>
+        <div class="settings-row">
+          <span class="settings-label">API Key</span>
+          <div class="api-key-wrap">
+            <input type="password" class="settings-input mono-input" id="marz-api-key-input" placeholder="Your MarzPay API key...">
+            <button class="api-key-toggle" onclick="toggleApiKeyVis()" id="api-key-eye">👁</button>
+          </div>
+          <button class="btn btn-save" onclick="saveMarzApiKey()">Save</button>
+        </div>
+        <div class="settings-row" style="margin-top:4px;">
+          <span class="settings-label">Status</span>
+          <div id="api-status-display">
+            <span class="api-status-badge notset" id="api-status-badge">⚠️ Not Set</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- WhatsApp Links -->
       <div class="settings-section">
         <div class="settings-title">💬 WhatsApp Links</div>
         <div class="settings-sub">Set the WhatsApp group and support chat links shown to users</div>
         <div class="settings-row"><span class="settings-label">WhatsApp Group Link</span><input type="url" class="settings-input" id="wa-group-input" placeholder="https://chat.whatsapp.com/..."><button class="btn btn-save" onclick="saveWaGroup()">Save</button></div>
         <div class="settings-row"><span class="settings-label">WhatsApp Support Link</span><input type="url" class="settings-input" id="wa-support-input" placeholder="https://wa.me/..."><button class="btn btn-save" onclick="saveWaSupport()">Save</button></div>
       </div>
+
+      <!-- Deposit & Withdrawal Settings -->
       <div class="settings-section">
-        <div class="settings-title">📊 Percentage Settings</div>
-        <div class="settings-sub">Adjust tax, withdrawal charge and referral percentages</div>
-        <div class="settings-row"><span class="settings-label">URA Tax on Deposits</span><div class="pct-group"><input type="number" class="pct-input" id="ura-tax-input" min="0" max="50" step="0.1"><span class="pct-label">%</span></div><button class="btn btn-save" onclick="saveUraTax()">Save</button></div>
-        <div class="settings-row"><span class="settings-label">Withdrawal Charge</span><div class="pct-group"><input type="number" class="pct-input" id="with-charge-input" min="0" max="50" step="0.1"><span class="pct-label">%</span></div><button class="btn btn-save" onclick="saveWithCharge()">Save</button></div>
+        <div class="settings-title">💰 Deposit & Withdrawal Settings</div>
+        <div class="settings-sub">Set minimum deposit amount and withdrawal service charge</div>
+        <div class="settings-row">
+          <span class="settings-label">Minimum Deposit (UGX)</span>
+          <div class="ugx-group">
+            <span class="ugx-label">UGX</span>
+            <input type="number" class="ugx-input" id="min-deposit-input" min="500" max="10000000" step="500" placeholder="10000">
+          </div>
+          <button class="btn btn-save" onclick="saveMinDeposit()">Save</button>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">Withdrawal Service Charge</span>
+          <div class="pct-group"><input type="number" class="pct-input" id="with-charge-input" min="0" max="50" step="0.1"><span class="pct-label">%</span></div>
+          <button class="btn btn-save" onclick="saveWithCharge()">Save</button>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">URA Tax on Deposits</span>
+          <div class="pct-group"><input type="number" class="pct-input" id="ura-tax-input" min="0" max="50" step="0.1"><span class="pct-label">%</span></div>
+          <button class="btn btn-save" onclick="saveUraTax()">Save</button>
+        </div>
+      </div>
+
+      <!-- Referral Settings -->
+      <div class="settings-section">
+        <div class="settings-title">🔗 Referral Percentages</div>
+        <div class="settings-sub">Adjust referral bonus percentages for each level</div>
         <div class="settings-row"><span class="settings-label">Referral Level 1</span><div class="pct-group"><input type="number" class="pct-input" id="ref-l1-input" min="0" max="50" step="0.1"><span class="pct-label">%</span></div><button class="btn btn-save" onclick="saveRefPct()">Save All Ref %</button></div>
         <div class="settings-row"><span class="settings-label">Referral Level 2</span><div class="pct-group"><input type="number" class="pct-input" id="ref-l2-input" min="0" max="50" step="0.1"><span class="pct-label">%</span></div></div>
         <div class="settings-row"><span class="settings-label">Referral Level 3</span><div class="pct-group"><input type="number" class="pct-input" id="ref-l3-input" min="0" max="50" step="0.1"><span class="pct-label">%</span></div></div>
       </div>
+
+      <!-- Withdrawal Lock -->
       <div class="danger-zone">
-        <div class="danger-title">⚠️ Danger Zone</div>
+        <div class="danger-title">⚠️ Withdrawal Lock</div>
         <div class="danger-sub">Lock or unlock withdrawals for ALL users globally</div>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
           <button class="btn btn-danger" onclick="lockWithdrawals(true)">🔒 Lock All Withdrawals</button>
@@ -309,17 +347,18 @@
           <span id="lock-status" style="font-size:13px;color:var(--muted);">Checking...</span>
         </div>
       </div>
+
+      <!-- Delete Data -->
       <div class="danger-zone" style="margin-top:20px;">
         <div class="danger-title">🗑️ Delete Data</div>
         <div class="danger-sub">Permanently delete platform data. These actions cannot be undone.</div>
         <div style="display:flex;gap:12px;flex-wrap:wrap;">
           <button class="btn btn-danger" onclick="deleteAllUsers()">🗑️ Delete All Users</button>
-          <button class="btn btn-danger" onclick="deleteAllDeposits()">🗑️ Delete All Deposits</button>
-          <button class="btn btn-danger" onclick="deleteAllWithdrawals()">🗑️ Delete All Withdrawals</button>
           <button class="btn btn-danger" style="background:linear-gradient(135deg,#7f1d1d,#dc2626);" onclick="deleteAllData()">💥 Delete ALL Data</button>
         </div>
       </div>
     </div>
+
   </div>
 </div>
 
@@ -354,32 +393,6 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// ── MARZPAY API ──
-const MARZ_BASE = 'https://wallet.wearemarz.com/api/v1';
-const MARZ_AUTH = 'Basic bWFyel9XTmdlOHA3YUpXQXhORFJtOnRqSGZTU09hUXJXWDFTUVpuejQ0MnhVTEx0TTdpdmN4';
-
-function generateUUID(){
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{
-    const r=Math.random()*16|0; return (c==='x'?r:(r&0x3|0x8)).toString(16);
-  });
-}
-
-async function marzSendMoney(phone, amount, description){
-  const formatted = '+256' + phone.slice(1);
-  const formData = new FormData();
-  formData.append('phone_number', formatted);
-  formData.append('amount', String(amount));
-  formData.append('country', 'UG');
-  formData.append('reference', generateUUID());
-  formData.append('description', description || 'DON-PESSA Withdrawal');
-  const res = await fetch(MARZ_BASE + '/send-money', {
-    method: 'POST',
-    headers: { 'Authorization': MARZ_AUTH },
-    body: formData
-  });
-  return await res.json();
-}
-
 // ── CONSTANTS ──
 const ADMIN_USER = 'ZamZam1952';
 const ADMIN_PASS = 'SWWIPTRADE2024';
@@ -387,7 +400,11 @@ const SESSION_KEY = 'dw_admin_session';
 
 // ── STATE ──
 let allUsers = {};
-let allSettings = { uraTax:3.7, withdrawCharge:10, refL1:10, refL2:4, refL3:1, waGroup:'', waSupport:'', withdrawLocked:false };
+let allSettings = {
+  uraTax:3.7, withdrawCharge:10, refL1:10, refL2:4, refL3:1,
+  waGroup:'', waSupport:'', withdrawLocked:false,
+  minDeposit:10000, marzApiKey:''
+};
 let searchFilter = '';
 
 function fmt(n){ return 'UGX '+Number(n||0).toLocaleString(); }
@@ -397,9 +414,8 @@ function toast(msg,color){ const t=document.getElementById('toast'); t.textConte
 // ── INIT ──
 function initAdmin(){
   const session = sessionStorage.getItem(SESSION_KEY);
-  if(session === 'true'){
-    showPanel();
-  } else {
+  if(session==='true'){ showPanel(); }
+  else {
     document.getElementById('loading-screen').style.display='none';
     document.getElementById('login-wrap').style.display='flex';
   }
@@ -412,45 +428,19 @@ function showPanel(){
   startRealtimeListeners();
 }
 
-// ── FIX 2: REALTIME LISTENERS — instant reflection ──
+// ── REALTIME LISTENERS ──
 function startRealtimeListeners(){
-  // Users — real-time
   db.ref('users').on('value', snap=>{
     allUsers = snap.val()||{};
     renderDashboard();
     renderUsersTable();
     renderTube();
   });
-  // Deposit queue — fires instantly on new request
-  db.ref('deposit_queue').on('value', snap=>{
-    const data=snap.val()||{};
-    renderDeposits(data);
-    updateBadges(data, null);
-    renderDashboard();
-  });
-  // Withdraw queue — fires instantly on new request
-  db.ref('withdraw_queue').on('value', snap=>{
-    const data=snap.val()||{};
-    renderWithdrawals(data);
-    updateBadges(null, snap.val()||{});
-  });
-  // Settings
   db.ref('settings').on('value', snap=>{
     if(snap.exists()) allSettings=snap.val();
     loadSettingsUI();
     renderDashboard();
   });
-}
-
-// ── BADGES ──
-let lastDepQ={}, lastWithQ={};
-function updateBadges(depQ, withQ){
-  if(depQ!==null)lastDepQ=depQ;
-  if(withQ!==null)lastWithQ=withQ;
-  const depPending=Object.values(lastDepQ).filter(r=>r.status==='pending').length;
-  const withPending=Object.values(lastWithQ).filter(r=>r.status==='pending').length;
-  const db2=document.getElementById('dep-badge'); db2.textContent=depPending; db2.style.display=depPending?'inline':'none';
-  const wb=document.getElementById('with-badge'); wb.textContent=withPending; wb.style.display=withPending?'inline':'none';
 }
 
 // ── LOGIN ──
@@ -469,8 +459,6 @@ function adminLogin(){
 function adminLogout(){
   sessionStorage.removeItem(SESSION_KEY);
   db.ref('users').off();
-  db.ref('deposit_queue').off();
-  db.ref('withdraw_queue').off();
   db.ref('settings').off();
   document.getElementById('admin-wrap').classList.remove('active');
   document.getElementById('login-wrap').style.display='flex';
@@ -483,7 +471,7 @@ function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  const map={'pg-dashboard':0,'pg-deposits':1,'pg-withdrawals':2,'pg-users':3,'pg-tube':4,'pg-debit':5,'pg-settings':6};
+  const map={'pg-dashboard':0,'pg-users':1,'pg-tube':2,'pg-debit':3,'pg-settings':4};
   if(map[id]!==undefined) document.querySelectorAll('.nav-item')[map[id]].classList.add('active');
 }
 
@@ -498,173 +486,17 @@ function renderDashboard(){
   document.getElementById('d-total-withdrawn').textContent=fmt(withdrawn);
   document.getElementById('d-total-earned').textContent=fmt(earned);
   document.getElementById('d-locked').textContent=locked;
+  document.getElementById('d-min-deposit').textContent=fmt(allSettings.minDeposit||10000);
   const s=allSettings;
   document.getElementById('pct-summary').innerHTML=
-    `<div class="pct-pill">URA Tax <span>${s.uraTax}%</span></div>
-     <div class="pct-pill">Withdrawal Charge <span>${s.withdrawCharge}%</span></div>
-     <div class="pct-pill">Ref L1 <span>${s.refL1}%</span></div>
-     <div class="pct-pill">Ref L2 <span>${s.refL2}%</span></div>
-     <div class="pct-pill">Ref L3 <span>${s.refL3}%</span></div>
+    `<div class="pct-pill">Min Deposit <span>${fmt(s.minDeposit||10000)}</span></div>
+     <div class="pct-pill">URA Tax <span>${s.uraTax||3.7}%</span></div>
+     <div class="pct-pill">Withdrawal Charge <span>${s.withdrawCharge||10}%</span></div>
+     <div class="pct-pill">Ref L1 <span>${s.refL1||10}%</span></div>
+     <div class="pct-pill">Ref L2 <span>${s.refL2||4}%</span></div>
+     <div class="pct-pill">Ref L3 <span>${s.refL3||1}%</span></div>
+     <div class="pct-pill">MarzPay API <span style="color:${s.marzApiKey?'var(--accent3)':'var(--warn)'};">${s.marzApiKey?'✅ Set':'⚠️ Not Set'}</span></div>
      <div class="pct-pill">Withdrawals <span style="color:${s.withdrawLocked?'var(--warn)':'var(--accent3)'};">${s.withdrawLocked?'🔒 LOCKED':'🔓 OPEN'}</span></div>`;
-}
-
-// ── DEPOSITS ──
-function renderDeposits(depData){
-  const pending=Object.entries(depData).filter(([k,r])=>r.status==='pending');
-  // Sort newest to oldest
-  pending.sort((a,b)=>{
-    const da=new Date(a[1].date||0), db2=new Date(b[1].date||0);
-    return db2-da;
-  });
-  const tbody=document.getElementById('dep-table-body');
-  document.getElementById('d-pend-dep').textContent=pending.length;
-  if(!pending.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="7">No pending deposit requests</td></tr>'; return; }
-  tbody.innerHTML=pending.map(([key,r])=>`
-    <tr>
-      <td><strong>${r.username}</strong></td>
-      <td class="mono">${r.phone}</td>
-      <td class="mono">${fmt(r.amount)}</td>
-      <td class="mono" style="color:var(--gold)">${fmt(r.totalSent)}</td>
-      <td class="mono" style="font-size:11px">${r.date}</td>
-      <td><span class="badge badge-pending">Pending</span></td>
-      <td style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-approve" onclick="approveDeposit('${key}','${r.username}',${r.amount})">✅ Approve</button>
-        <button class="btn btn-reject" onclick="rejectDeposit('${key}')">❌ Reject</button>
-      </td>
-    </tr>`).join('');
-}
-
-async function approveDeposit(key, username, amount){
-  try{
-    const sKey=safeKey(username);
-    const snap=await db.ref('users/'+sKey).get();
-    if(!snap.exists()){toast('User not found','#f87171');return;}
-    const u=snap.val();
-    const profit=Math.floor(amount*0.10);
-    const depKey='dep_'+Date.now();
-    const tx1='tx_'+Date.now()+'a';
-    const tx2='tx_'+Date.now()+'b';
-    const updates={};
-    updates['users/'+sKey+'/activated']=true;
-    updates['users/'+sKey+'/invested']=(u.invested||0)+amount;
-    updates['users/'+sKey+'/balance']=(u.balance||0)+profit;
-    updates['users/'+sKey+'/deposits/'+depKey]={amount,startDate:Date.now(),daysRun:0};
-    updates['users/'+sKey+'/transactions/'+tx1]={type:'Deposit',amount,note:'Mobile Money — Approved',date:new Date().toLocaleString()};
-    updates['users/'+sKey+'/transactions/'+tx2]={type:'Profit',amount:profit,note:'10% instant profit on deposit',date:new Date().toLocaleString()};
-    updates['deposit_queue/'+key+'/status']='approved';
-    await db.ref().update(updates);
-    // Pay referral bonuses
-    await payReferralBonus(username, amount);
-    toast('✅ Deposit approved for '+username);
-  } catch(e){ toast('❌ Error: '+e.message,'#f87171'); console.error(e); }
-}
-
-async function rejectDeposit(key){
-  await db.ref('deposit_queue/'+key+'/status').set('rejected');
-  toast('Deposit rejected','#f87171');
-}
-
-async function payReferralBonus(depositorUsername, amount){
-  const snap=await db.ref('users/'+safeKey(depositorUsername)).get();
-  if(!snap.exists())return;
-  const depositor=snap.val();
-  if(!depositor.referredBy)return;
-  const pcts=[allSettings.refL1/100, allSettings.refL2/100, allSettings.refL3/100];
-  let uplineUsername=depositor.referredBy;
-  for(let i=0;i<3;i++){
-    if(!uplineUsername)break;
-    const uSnap=await db.ref('users/'+safeKey(uplineUsername)).get();
-    if(!uSnap.exists())break;
-    const upline=uSnap.val();
-    const bonus=Math.floor(amount*pcts[i]);
-    const txKey='tx_'+Date.now()+'_ref'+i;
-    const updates={};
-    updates['users/'+safeKey(uplineUsername)+'/balance']=(upline.balance||0)+bonus;
-    updates['users/'+safeKey(uplineUsername)+'/refEarned']=(upline.refEarned||0)+bonus;
-    updates['users/'+safeKey(uplineUsername)+'/transactions/'+txKey]={type:'Referral',amount:bonus,note:`Level ${i+1} bonus from ${depositorUsername}`,date:new Date().toLocaleString()};
-    const refSnap=await db.ref('users/'+safeKey(uplineUsername)+'/referrals/'+safeKey(depositorUsername)).get();
-    if(refSnap.exists()){
-      updates['users/'+safeKey(uplineUsername)+'/referrals/'+safeKey(depositorUsername)+'/invested']=(refSnap.val().invested||0)+amount;
-    }
-    await db.ref().update(updates);
-    uplineUsername=upline.referredBy||null;
-  }
-}
-
-// ── WITHDRAWALS ──
-function renderWithdrawals(withData){
-  const pending=Object.entries(withData).filter(([k,r])=>r.status==='pending');
-  const tbody=document.getElementById('with-table-body');
-  document.getElementById('d-pend-with').textContent=pending.length;
-  if(!pending.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="7">No pending withdrawal requests</td></tr>'; return; }
-  tbody.innerHTML=pending.map(([key,r])=>`
-    <tr>
-      <td><strong>${r.username}</strong></td>
-      <td class="mono">${r.phone}</td>
-      <td class="mono">${fmt(r.requestedAmount)}</td>
-      <td class="mono" style="color:var(--accent3)">${fmt(r.netAmount)}</td>
-      <td class="mono" style="font-size:11px">${r.date}</td>
-      <td><span class="badge badge-pending">Pending</span></td>
-      <td style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-approve" onclick="approveWithdraw('${key}','${r.username}',${r.requestedAmount},${r.netAmount})">✅ Approve</button>
-        <button class="btn btn-reject" onclick="rejectWithdraw('${key}','${r.username}',${r.requestedAmount})">❌ Reject</button>
-      </td>
-    </tr>`).join('');
-}
-
-async function approveWithdraw(key, username, requestedAmount, netAmount){
-  try{
-    const sKey=safeKey(username);
-    const snap=await db.ref('users/'+sKey).get();
-    if(!snap.exists())return;
-    const u=snap.val();
-
-    // Auto-send money via MarzPay
-    toast('⏳ Sending money via MarzPay...', '#818cf8');
-    const marzRes = await marzSendMoney(u.phone, netAmount, 'DON-PESSA Withdrawal — '+username);
-
-    if(marzRes.status !== 'success'){
-      toast('❌ MarzPay Error: '+(marzRes.message||'Send money failed'),'#f87171');
-      return;
-    }
-
-    const marzRef = marzRes.data?.transaction?.uuid || '';
-    const txs=u.transactions?Object.entries(u.transactions):[];
-    const pendingTx=txs.find(([k,t])=>t.status==='pending'&&t.type==='Withdrawal');
-    const updates={};
-    updates['withdraw_queue/'+key+'/status']='approved';
-    updates['withdraw_queue/'+key+'/marzRef']=marzRef;
-    updates['users/'+sKey+'/withdrawn']=(u.withdrawn||0)+netAmount;
-    if(pendingTx){
-      updates['users/'+sKey+'/transactions/'+pendingTx[0]+'/status']='approved';
-      updates['users/'+sKey+'/transactions/'+pendingTx[0]+'/note']=`Withdrawal Successful — ${fmt(netAmount)} sent via MarzPay`;
-    }
-    await db.ref().update(updates);
-    toast('✅ Withdrawal approved & sent to '+username+' (Ref: '+marzRef.slice(0,8)+'...)');
-  } catch(e){ toast('❌ Error: '+e.message,'#f87171'); console.error(e); }
-}
-
-async function rejectWithdraw(key, username, requestedAmount){
-  try{
-    const sKey=safeKey(username);
-    const snap=await db.ref('users/'+sKey).get();
-    if(!snap.exists())return;
-    const u=snap.val();
-    const txs=u.transactions?Object.entries(u.transactions):[];
-    const pendingTx=txs.find(([k,t])=>t.status==='pending'&&t.type==='Withdrawal');
-    const txKey='tx_'+Date.now()+'_ref';
-    const updates={};
-    updates['withdraw_queue/'+key+'/status']='rejected';
-    updates['users/'+sKey+'/balance']=(u.balance||0)+requestedAmount;
-    if(pendingTx){
-      updates['users/'+sKey+'/transactions/'+pendingTx[0]+'/status']='rejected';
-      updates['users/'+sKey+'/transactions/'+pendingTx[0]+'/note']='Withdrawal Failed — amount returned';
-      updates['users/'+sKey+'/transactions/'+pendingTx[0]+'/amount']=requestedAmount;
-    }
-    updates['users/'+sKey+'/transactions/'+txKey]={type:'Bonus',amount:requestedAmount,note:'Withdrawal rejected — refunded to balance',date:new Date().toLocaleString()};
-    await db.ref().update(updates);
-    toast('Withdrawal rejected, funds returned','#f87171');
-  } catch(e){ toast('❌ Error','#f87171'); console.error(e); }
 }
 
 // ── USERS ──
@@ -700,7 +532,7 @@ function renderUsersTable(){
 
 function editPw(sk){
   const cell=document.getElementById('pwcell_'+sk);
-  if(!cell)return;
+  if(!cell) return;
   const cur=cell.querySelector('.pw-val');
   const currentPw=cur?cur.textContent:'';
   cell.innerHTML=`<input class="pw-edit-input" id="pwinput_${sk}" value="${currentPw}" type="text"><button class="pw-save-btn" onclick="savePw('${sk}')">✓</button>`;
@@ -710,19 +542,18 @@ function editPw(sk){
 
 async function savePw(sk){
   const inp=document.getElementById('pwinput_'+sk);
-  if(!inp)return;
+  if(!inp) return;
   const newPw=inp.value.trim();
   if(!newPw){toast('Password cannot be empty','#f87171');return;}
-  // find real username
   const u=Object.values(allUsers).find(u=>safeKey(u.username||'')==sk);
-  if(!u)return;
+  if(!u) return;
   await db.ref('users/'+sk+'/password').set(newPw);
   toast('✅ Password updated for '+u.username);
 }
 
 function openEditModal(username){
   const u=allUsers[safeKey(username)];
-  if(!u)return;
+  if(!u) return;
   document.getElementById('edit-username').value=username;
   document.getElementById('edit-password').value=u.password||'';
   document.getElementById('edit-balance').value=u.balance||0;
@@ -748,7 +579,7 @@ async function toggleLock(username, lock){
 }
 
 async function deleteUser(username){
-  if(!confirm(`Delete user "${username}"? This cannot be undone.`))return;
+  if(!confirm(`Delete user "${username}"? This cannot be undone.`)) return;
   await db.ref('users/'+safeKey(username)).remove();
   toast('🗑️ User deleted','#f87171');
 }
@@ -776,11 +607,46 @@ function loadSettingsUI(){
   document.getElementById('ref-l1-input').value=s.refL1||10;
   document.getElementById('ref-l2-input').value=s.refL2||4;
   document.getElementById('ref-l3-input').value=s.refL3||1;
+  document.getElementById('min-deposit-input').value=s.minDeposit||10000;
+  // API key — show masked if set
+  const apiKeyInp = document.getElementById('marz-api-key-input');
+  if(s.marzApiKey){ apiKeyInp.value=s.marzApiKey; }
+  // API status badge
+  const badge = document.getElementById('api-status-badge');
+  if(s.marzApiKey && s.marzApiKey.length > 5){
+    badge.className='api-status-badge set';
+    badge.textContent='✅ API Key Set';
+  } else {
+    badge.className='api-status-badge notset';
+    badge.textContent='⚠️ Not Set — Payments Disabled';
+  }
+  // Lock status
   const ls=document.getElementById('lock-status');
   ls.textContent='Status: Withdrawals are '+(s.withdrawLocked?'🔒 LOCKED':'🔓 OPEN');
   ls.style.color=s.withdrawLocked?'var(--warn)':'var(--accent3)';
 }
 
+// ── API KEY VISIBILITY TOGGLE ──
+function toggleApiKeyVis(){
+  const inp=document.getElementById('marz-api-key-input');
+  const btn=document.getElementById('api-key-eye');
+  if(inp.type==='password'){ inp.type='text'; btn.textContent='🙈'; }
+  else { inp.type='password'; btn.textContent='👁'; }
+}
+
+// ── SAVE SETTINGS ──
+async function saveMarzApiKey(){
+  const val=document.getElementById('marz-api-key-input').value.trim();
+  if(!val){ toast('Please enter a valid API key','#f87171'); return; }
+  await db.ref('settings/marzApiKey').set(val);
+  toast('✅ MarzPay API key saved — Payments enabled!');
+}
+async function saveMinDeposit(){
+  const v=parseInt(document.getElementById('min-deposit-input').value)||10000;
+  if(v<500){ toast('Minimum deposit must be at least UGX 500','#f87171'); return; }
+  await db.ref('settings/minDeposit').set(v);
+  toast('✅ Minimum deposit set to '+fmt(v));
+}
 async function saveWaGroup(){ await db.ref('settings/waGroup').set(document.getElementById('wa-group-input').value.trim()); toast('✅ WhatsApp Group link saved'); }
 async function saveWaSupport(){ await db.ref('settings/waSupport').set(document.getElementById('wa-support-input').value.trim()); toast('✅ WhatsApp Support link saved'); }
 async function saveUraTax(){ const v=parseFloat(document.getElementById('ura-tax-input').value)||3.7; await db.ref('settings/uraTax').set(v); toast('✅ URA Tax updated to '+v+'%'); }
@@ -790,44 +656,19 @@ async function lockWithdrawals(lock){ await db.ref('settings/withdrawLocked').se
 
 // ── DELETE ALL ──
 async function deleteAllUsers(){
-  if(!confirm('⚠️ DELETE ALL USERS? This cannot be undone!'))return;
-  if(!confirm('Are you absolutely sure? All user accounts will be permanently deleted.'))return;
+  if(!confirm('⚠️ DELETE ALL USERS? This cannot be undone!')) return;
+  if(!confirm('Are you absolutely sure? All user accounts will be permanently deleted.')) return;
   await db.ref('users').remove();
   toast('🗑️ All users deleted','#f87171');
 }
-async function deleteAllDeposits(){
-  if(!confirm('⚠️ DELETE ALL DEPOSIT REQUESTS? This cannot be undone!'))return;
-  await db.ref('deposit_queue').remove();
-  toast('🗑️ All deposits deleted','#f87171');
-}
-async function deleteAllWithdrawals(){
-  if(!confirm('⚠️ DELETE ALL WITHDRAWAL REQUESTS? This cannot be undone!'))return;
-  await db.ref('withdraw_queue').remove();
-  toast('🗑️ All withdrawals deleted','#f87171');
-}
 async function deleteAllData(){
-  if(!confirm('💥 DELETE ALL DATA? Users, deposits, and withdrawals will ALL be permanently deleted!'))return;
-  if(!confirm('FINAL WARNING: This will wipe everything. Are you 100% sure?'))return;
-  await Promise.all([
-    db.ref('users').remove(),
-    db.ref('deposit_queue').remove(),
-    db.ref('withdraw_queue').remove()
-  ]);
+  if(!confirm('💥 DELETE ALL DATA? Users will ALL be permanently deleted!')) return;
+  if(!confirm('FINAL WARNING: This will wipe everything. Are you 100% sure?')) return;
+  await db.ref('users').remove();
   toast('💥 All data deleted','#f87171');
 }
 
-// Toggle admin password visibility
-function toggleAdminPw(){
-  const inp=document.getElementById('a-pass');
-  const btn=document.getElementById('a-eye');
-  if(inp.type==='password'){inp.type='text';btn.textContent='🙈';}
-  else{inp.type='password';btn.textContent='👁️';}
-}
-
-// Enter key
-document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&document.getElementById('login-wrap').style.display!=='none')adminLogin(); });
-
-// ── FIX 3: DEBIT LOAN ──
+// ── DEBIT LOAN ──
 let debitTargetUser = null;
 let debitHistory = [];
 
@@ -878,18 +719,13 @@ async function processDebit(){
   try{
     const updates = {};
     updates['users/'+sk+'/balance'] = newBal;
-    updates['users/'+sk+'/transactions/'+txKey] = {
-      type:'Debit', amount:-amount,
-      note:'Account debit', date:now
-    };
+    updates['users/'+sk+'/transactions/'+txKey] = {type:'Debit', amount:-amount, note:'Account debit', date:now};
     await db.ref().update(updates);
-    // Record in debit history
     debitHistory.unshift({ username:debitTargetUser.username, amount, balAfter:newBal, date:now });
     renderDebitHistory();
     toast('✅ Debited UGX '+amount.toLocaleString()+' from '+debitTargetUser.username);
     document.getElementById('debit-amount').value='';
     document.getElementById('debit-preview').style.display='none';
-    // Refresh user info
     searchDebitUser();
   } catch(e){ toast('❌ Failed: '+e.message,'#f87171'); }
 }
@@ -905,6 +741,16 @@ function renderDebitHistory(){
       <td class="mono" style="font-size:11px;">${d.date}</td>
     </tr>`).join('');
 }
+
+// ── TOGGLE ADMIN PASSWORD ──
+function toggleAdminPw(){
+  const inp=document.getElementById('a-pass');
+  const btn=document.getElementById('a-eye');
+  if(inp.type==='password'){inp.type='text';btn.textContent='🙈';}
+  else{inp.type='password';btn.textContent='👁️';}
+}
+
+document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&document.getElementById('login-wrap').style.display!=='none')adminLogin(); });
 
 initAdmin();
 </script>
