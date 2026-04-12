@@ -951,9 +951,8 @@ async function marzSend(phone, amount, reference, description){
 }
 
 // ── MARZ API: CHECK TRANSACTION STATUS ──
-async function marzCheckStatus(uuid, type){
-  const endpoint = type==='collect' ? '/collect-money/'+uuid : '/send-money/'+uuid;
-  const response = await fetch(MARZ_API+endpoint, {
+async function marzCheckStatus(uuid){
+  const response = await fetch(MARZ_API+'/transactions/'+uuid, {
     headers: { 'Authorization': getMarzAuth() }
   });
   if(!response.ok) return null;
@@ -967,10 +966,15 @@ async function pollPaymentStatus(uuid, type, maxAttempts=36, intervalMs=5000){
     const progress = Math.min(95, ((i+1)/maxAttempts)*100);
     document.getElementById('pso-progress').style.width = progress+'%';
     try{
-      const result = await marzCheckStatus(uuid, type);
+      const result = await marzCheckStatus(uuid);
       if(!result) continue;
-      const status = result?.data?.transaction?.status || result?.status || '';
-      if(status==='successful' || status==='success') return 'success';
+      // MarzPay returns status at result.transaction.status
+      const status = (
+        result?.transaction?.status ||
+        result?.data?.transaction?.status ||
+        result?.status || ''
+      ).toLowerCase();
+      if(status==='completed' || status==='successful' || status==='success') return 'success';
       if(status==='failed' || status==='cancelled') return 'failed';
     } catch(e){ /* continue polling */ }
   }
