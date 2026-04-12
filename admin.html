@@ -203,6 +203,7 @@
       <div class="nav-item active" onclick="showPage('pg-dashboard')"><span class="nav-icon">📊</span><span>Dashboard</span></div>
       <div class="nav-item" onclick="showPage('pg-users')"><span class="nav-icon">👥</span><span>Users</span></div>
       <div class="nav-item" onclick="showPage('pg-tube')"><span class="nav-icon">🎯</span><span>Tube</span></div>
+      <div class="nav-item" onclick="showPage('pg-transactions')"><span class="nav-icon">💰</span><span>Transactions</span></div>
       <div class="nav-item" onclick="showPage('pg-debit')"><span class="nav-icon">💳</span><span>Debit Loan</span></div>
       <div class="nav-item" onclick="showPage('pg-settings')"><span class="nav-icon">⚙️</span><span>Settings</span></div>
     </div>
@@ -251,6 +252,43 @@
       <div class="tube-grid" id="tube-grid"><p style="color:var(--muted);font-size:13px">Loading...</p></div>
     </div>
 
+    <!-- TRANSACTIONS -->
+    <div class="page" id="pg-transactions">
+      <div class="page-title">Transactions</div>
+      <div class="page-sub">All deposits and withdrawals across all users</div>
+
+      <!-- Pending Withdrawals (Fix 3) -->
+      <div class="table-wrap" id="pending-with-wrap" style="margin-bottom:24px;display:none;">
+        <div class="table-header" style="background:rgba(248,113,113,.08);border-bottom-color:rgba(248,113,113,.3);">
+          <div class="table-title" style="color:var(--warn);">⏳ Pending Withdrawal Approvals</div>
+          <span id="pending-with-count" style="font-size:12px;color:var(--warn);font-weight:700;"></span>
+        </div>
+        <table>
+          <thead><tr><th>Date</th><th>Username</th><th>Phone</th><th>Amount</th><th>Actions</th></tr></thead>
+          <tbody id="pending-with-body"><tr class="empty-row"><td colspan="5">No pending withdrawals</td></tr></tbody>
+        </table>
+      </div>
+
+      <!-- Filter Tabs -->
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+        <button class="btn btn-save" id="tf-all" onclick="filterTx('all')" style="padding:7px 16px;font-size:12px;">All</button>
+        <button class="btn btn-edit" id="tf-deposit" onclick="filterTx('deposit')" style="padding:7px 16px;font-size:12px;">Deposits</button>
+        <button class="btn btn-edit" id="tf-withdrawal" onclick="filterTx('withdrawal')" style="padding:7px 16px;font-size:12px;">Withdrawals</button>
+        <button class="btn btn-reject" id="tf-failed" onclick="filterTx('failed')" style="padding:7px 16px;font-size:12px;">Failed</button>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">💰 All Transactions</div>
+          <span id="tx-count" style="font-size:12px;color:var(--muted);"></span>
+        </div>
+        <table>
+          <thead><tr><th>Date</th><th>Username</th><th>Type</th><th>Amount</th><th>Note</th><th>Status</th></tr></thead>
+          <tbody id="tx-table-body"><tr class="empty-row"><td colspan="6">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- DEBIT LOAN -->
     <div class="page" id="pg-debit">
       <div class="page-title">Debit Loan</div>
@@ -261,7 +299,7 @@
           <div style="margin-bottom:16px;">
             <label class="f-label">Search Username</label>
             <div style="display:flex;gap:10px;">
-              <div class="f-wrap" style="flex:1;"><span class="f-icon">👤</span><input type="text" class="f-input" id="debit-search" placeholder="Enter exact username..." oninput="searchDebitUser()"></div>
+              <div class="f-wrap" style="flex:1;"><span class="f-icon">??</span><input type="text" class="f-input" id="debit-search" placeholder="Enter exact username..." oninput="searchDebitUser()"></div>
             </div>
           </div>
           <div id="debit-user-info" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;">
@@ -367,6 +405,17 @@
         <div class="settings-row"><span class="settings-label">Referral Level 1</span><div class="pct-group"><input type="number" class="pct-input" id="ref-l1-input" min="0" max="50" step="0.1"><span class="pct-label">%</span></div><button class="btn btn-save" onclick="saveRefPct()">Save All Ref %</button></div>
         <div class="settings-row"><span class="settings-label">Referral Level 2</span><div class="pct-group"><input type="number" class="pct-input" id="ref-l2-input" min="0" max="50" step="0.1"><span class="pct-label">%</span></div></div>
         <div class="settings-row"><span class="settings-label">Referral Level 3</span><div class="pct-group"><input type="number" class="pct-input" id="ref-l3-input" min="0" max="50" step="0.1"><span class="pct-label">%</span></div></div>
+      </div>
+
+      <!-- Withdrawal Approval Toggle (Fix 3) -->
+      <div class="settings-section" style="border-color:rgba(251,191,36,.3);">
+        <div class="settings-title" style="color:var(--gold);">✅ Withdrawal Approval</div>
+        <div class="settings-sub">When ON, admin must approve each withdrawal before funds are sent. When OFF, withdrawals are processed automatically.</div>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-success" onclick="setWithdrawApproval(true)">✅ Turn ON (Manual Approval)</button>
+          <button class="btn btn-danger" onclick="setWithdrawApproval(false)">⚡ Turn OFF (Automatic)</button>
+          <span id="approval-status" style="font-size:13px;color:var(--muted);">Checking...</span>
+        </div>
       </div>
 
       <!-- Withdrawal Lock -->
@@ -518,6 +567,7 @@ function startRealtimeListeners(){
     renderDashboard();
   });
   startNotifListener();
+  startPendingWithdrawalsListener();
 }
 
 // ── LOGIN ──
@@ -548,8 +598,9 @@ function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  const map={'pg-dashboard':0,'pg-users':1,'pg-tube':2,'pg-debit':3,'pg-settings':4};
+  const map={'pg-dashboard':0,'pg-users':1,'pg-tube':2,'pg-transactions':3,'pg-debit':4,'pg-settings':5};
   if(map[id]!==undefined) document.querySelectorAll('.nav-item')[map[id]].classList.add('active');
+  if(id==='pg-transactions') renderTransactions();
 }
 
 // ── DASHBOARD ──
@@ -703,6 +754,12 @@ function loadSettingsUI(){
   const ls=document.getElementById('lock-status');
   ls.textContent='Status: Withdrawals are '+(s.withdrawLocked?'🔒 LOCKED':'🔓 OPEN');
   ls.style.color=s.withdrawLocked?'var(--warn)':'var(--accent3)';
+  // Approval status
+  const as=document.getElementById('approval-status');
+  if(as){
+    as.textContent='Status: '+(s.withdrawApproval?'✅ Manual Approval ON':'⚡ Automatic');
+    as.style.color=s.withdrawApproval?'var(--gold)':'var(--accent3)';
+  }
 }
 
 // ── API KEY VISIBILITY TOGGLE ──
@@ -825,6 +882,143 @@ function renderDebitHistory(){
       <td class="mono" style="color:${d.balAfter<0?'var(--warn)':'var(--accent3)'};">${fmt(d.balAfter)}</td>
       <td class="mono" style="font-size:11px;">${d.date}</td>
     </tr>`).join('');
+}
+
+// ── WITHDRAWAL APPROVAL TOGGLE (FIX 3) ──
+async function setWithdrawApproval(val){
+  await db.ref('settings/withdrawApproval').set(val);
+  toast(val ? '✅ Manual approval ON — admin must approve withdrawals' : '⚡ Automatic withdrawals ON', val?undefined:'#38bdf8');
+}
+
+// ── PROCESS PENDING WITHDRAWAL (FIX 3) ──
+async function approvePendingWithdrawal(reqKey, username, phone, amount, sendAmount, reference, txKey){
+  if(!confirm(`Approve withdrawal of ${fmt(amount)} for ${username}?`)) return;
+  try{
+    const result = await marzSendAdmin(phone, sendAmount, reference);
+    if(result && result.status === 'success'){
+      const u = await db.ref('users/'+safeKey(username)).get();
+      const userData = u.val()||{};
+      await db.ref().update({
+        ['users/'+safeKey(username)+'/withdrawn']: (userData.withdrawn||0)+amount,
+        ['users/'+safeKey(username)+'/transactions/'+txKey+'/status']: 'approved',
+        ['users/'+safeKey(username)+'/transactions/'+txKey+'/note']: 'Withdrawal Approved ✅',
+        ['pendingWithdrawals/'+reqKey+'/status']: 'approved'
+      });
+      toast('✅ Withdrawal approved and sent to '+username);
+    } else {
+      toast('❌ Failed to send: '+(result?.message||'Unknown error'), '#f87171');
+    }
+  } catch(e){ toast('❌ Error: '+e.message,'#f87171'); }
+}
+
+async function rejectPendingWithdrawal(reqKey, username, amount, txKey){
+  if(!confirm(`Reject and refund withdrawal of ${fmt(amount)} for ${username}?`)) return;
+  try{
+    const u = await db.ref('users/'+safeKey(username)).get();
+    const userData = u.val()||{};
+    await db.ref().update({
+      ['users/'+safeKey(username)+'/balance']: (userData.balance||0)+amount,
+      ['users/'+safeKey(username)+'/transactions/'+txKey+'/status']: 'failed',
+      ['users/'+safeKey(username)+'/transactions/'+txKey+'/note']: 'Withdrawal Rejected — Refunded',
+      ['pendingWithdrawals/'+reqKey+'/status']: 'rejected'
+    });
+    toast('✅ Withdrawal rejected and refunded to '+username);
+  } catch(e){ toast('❌ Error: '+e.message,'#f87171'); }
+}
+
+async function marzSendAdmin(phone, amount, reference){
+  const b64key = (allSettings.marzApiKey||'').trim().replace(/^basic /i,'');
+  const MARZ_PROXY = 'https://polished-truth-f9c5.vallazvallax.workers.dev';
+  const formData = new FormData();
+  formData.append('phone_number', phone);
+  formData.append('amount', String(amount));
+  formData.append('country', 'UG');
+  formData.append('reference', reference);
+  formData.append('description', 'DON-PESSA Withdrawal');
+  const res = await fetch(MARZ_PROXY+'/send-money', {
+    method:'POST',
+    headers:{'Authorization':'Basic '+b64key},
+    body: formData
+  });
+  return await res.json();
+}
+
+// ── PENDING WITHDRAWALS LISTENER ──
+function startPendingWithdrawalsListener(){
+  db.ref('pendingWithdrawals').on('value', snap=>{
+    const all = snap.val()||{};
+    const pending = Object.entries(all).filter(([k,v])=>v.status==='pending');
+    const wrap = document.getElementById('pending-with-wrap');
+    const tbody = document.getElementById('pending-with-body');
+    const countEl = document.getElementById('pending-with-count');
+    if(pending.length>0){
+      wrap.style.display='block';
+      countEl.textContent = pending.length+' pending';
+      tbody.innerHTML = pending.sort((a,b)=>b[0].localeCompare(a[0])).map(([k,v])=>`
+        <tr>
+          <td class="mono" style="font-size:11px;">${v.date||'—'}</td>
+          <td><strong>${v.username||'—'}</strong></td>
+          <td class="mono">${v.phone||'—'}</td>
+          <td class="mono" style="color:var(--gold);">${fmt(v.amount)}</td>
+          <td style="display:flex;gap:6px;">
+            <button class="btn btn-approve" onclick="approvePendingWithdrawal('${k}','${v.username}','${v.phone}',${v.amount},${v.sendAmount},'${v.reference}','${v.txKey}')">✅ Approve</button>
+            <button class="btn btn-reject" onclick="rejectPendingWithdrawal('${k}','${v.username}',${v.amount},'${v.txKey}')">❌ Reject</button>
+          </td>
+        </tr>`).join('');
+    } else {
+      wrap.style.display='none';
+    }
+  });
+}
+
+// ── TRANSACTIONS PAGE (FIX 2) ──
+let txFilter = 'all';
+function filterTx(type){
+  txFilter = type;
+  ['all','deposit','withdrawal','failed'].forEach(t=>{
+    const btn = document.getElementById('tf-'+t);
+    if(btn) btn.style.opacity = t===type?'1':'0.5';
+  });
+  renderTransactions();
+}
+
+function renderTransactions(){
+  const tbody = document.getElementById('tx-table-body');
+  const countEl = document.getElementById('tx-count');
+  const allTxs = [];
+  Object.values(allUsers).forEach(u=>{
+    if(!u.transactions) return;
+    Object.values(u.transactions).forEach(tx=>{
+      if(tx.type==='Deposit'||tx.type==='Withdrawal'){
+        allTxs.push({...tx, username: u.username});
+      }
+    });
+  });
+  // Sort newest first
+  allTxs.sort((a,b)=>{ return (b.date||'').localeCompare(a.date||''); });
+
+  let filtered = allTxs;
+  if(txFilter==='deposit') filtered = allTxs.filter(t=>t.type==='Deposit');
+  else if(txFilter==='withdrawal') filtered = allTxs.filter(t=>t.type==='Withdrawal');
+  else if(txFilter==='failed') filtered = allTxs.filter(t=>t.status==='failed');
+
+  countEl.textContent = filtered.length+' transactions';
+  if(!filtered.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="6">No transactions found</td></tr>'; return; }
+
+  tbody.innerHTML = filtered.map(tx=>{
+    const isDeposit = tx.type==='Deposit';
+    const statusColor = tx.status==='approved'?'var(--accent3)': tx.status==='failed'?'var(--warn)':'var(--gold)';
+    const statusText = tx.status==='approved'?'✅ Confirmed': tx.status==='failed'?'❌ Failed':'⏳ Pending';
+    const amtColor = isDeposit?'var(--accent3)':'var(--warn)';
+    return `<tr>
+      <td class="mono" style="font-size:11px;">${tx.date||'—'}</td>
+      <td><strong>${tx.username||'—'}</strong></td>
+      <td><span class="badge ${isDeposit?'badge-active':'badge-pending'}">${tx.type}</span></td>
+      <td class="mono" style="color:${amtColor};">${fmt(Math.abs(tx.amount||0))}</td>
+      <td style="font-size:11px;color:var(--muted);max-width:200px;">${tx.note||'—'}</td>
+      <td><span style="font-size:11px;font-weight:700;color:${statusColor};">${statusText}</span></td>
+    </tr>`;
+  }).join('');
 }
 
 // ── TOGGLE ADMIN PASSWORD ──

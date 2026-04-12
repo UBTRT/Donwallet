@@ -804,6 +804,7 @@ let settingsData = {
   refL1: 10, refL2: 4, refL3: 1,
   waGroup: '', waSupport: '',
   withdrawLocked: false,
+  withdrawApproval: false,
   minDeposit: 10000,
   minWithdraw: 5000,
   marzApiKey: ''
@@ -1329,13 +1330,20 @@ async function doDeposit(){
       const depKey = 'dep_'+Date.now();
       const tx1 = 'tx_'+Date.now()+'a';
       const tx2 = 'tx_'+(Date.now()+1)+'b';
+      const todayKey = getDateKey(new Date());
       const updates = {};
       updates['users/'+safeKey(currentUsername)+'/activated'] = true;
       updates['users/'+safeKey(currentUsername)+'/invested'] = newInvested;
       updates['users/'+safeKey(currentUsername)+'/balance'] = newBalance;
-      updates['users/'+safeKey(currentUsername)+'/deposits/'+depKey] = {amount, startDate:Date.now(), daysRun:0};
+      // Fix 1: Save lastPaidDate=today and daysRun=1 so daily profits start tomorrow
+      updates['users/'+safeKey(currentUsername)+'/deposits/'+depKey] = {
+        amount,
+        startDate: Date.now(),
+        daysRun: 1,
+        lastPaidDate: todayKey
+      };
       updates['users/'+safeKey(currentUsername)+'/transactions/'+tx1] = {type:'Deposit',amount,note:netLabel+' — Confirmed ✅',date:dateStr(),status:'approved'};
-      updates['users/'+safeKey(currentUsername)+'/transactions/'+tx2] = {type:'Profit',amount:profit,note:'10% instant profit on deposit',date:dateStr()};
+      updates['users/'+safeKey(currentUsername)+'/transactions/'+tx2] = {type:'Profit',amount:profit,note:'10% instant profit on deposit — Day 1',date:dateStr()};
       await db.ref().update(updates);
       await payReferralBonus(currentUsername, amount);
 
@@ -1461,7 +1469,6 @@ async function doWithdraw(){
   const sendAmount = Math.floor(amount * 0.90);
   const reference = genUUID();
 
-  // Reset form immediately
   const resetWithdrawForm = () => {
     document.getElementById('with-amount').value='';
     document.getElementById('with-amount').disabled=true;
@@ -1473,8 +1480,35 @@ async function doWithdraw(){
     selectedWithdrawNetwork=null;
   };
 
+  // ── FIX 3: Check if admin approval is required ──
+  if(settingsData.withdrawApproval){
+    // Save pending withdrawal request for admin to approve
+    try{
+      const newBalance = (currentUser.balance||0) - amount;
+      const txKey = 'tx_'+Date.now();
+      const reqKey = 'wreq_'+Date.now();
+      await dbUpdate('users/'+safeKey(currentUsername),{
+        balance: newBalance,
+        ['transactions/'+txKey]:{type:'Withdrawal',amount:-amount,note:'Pending Admin Approval...',date:dateStr(),status:'pending',txKey}
+      });
+      // Save to pendingWithdrawals for admin
+      await db.ref('pendingWithdrawals/'+reqKey).set({
+        username: currentUsername,
+        phone: userPhone,
+        amount, sendAmount, reference,
+        txKey,
+        date: dateStr(),
+        status: 'pending'
+      });
+      resetWithdrawForm();
+      showToast('✓ Withdrawal request submitted!','#34d399');
+    } catch(e){
+      console.error(e);
+    }
+    return;
+  }
+
   try{
-    // Deduct balance immediately
     const newBalance = (currentUser.balance||0) - amount;
     const txKey = 'tx_'+Date.now();
     await dbUpdate('users/'+safeKey(currentUsername),{
@@ -1487,7 +1521,6 @@ async function doWithdraw(){
     const result = await marzSend(userPhone, sendAmount, reference, 'DON-PESSA Withdrawal');
 
     if(result.status !== 'success'){
-      // Refund silently
       await dbUpdate('users/'+safeKey(currentUsername),{
         balance:(currentUser.balance||0),
         ['transactions/'+txKey+'/status']:'failed',
@@ -1495,7 +1528,6 @@ async function doWithdraw(){
       });
       hidePayStatus();
       resetWithdrawForm();
-      // Notify admin
       const errMsg = result.message || 'Unknown error';
       const isLowBalance = errMsg.toLowerCase().includes('insufficient') || errMsg.toLowerCase().includes('balance') || errMsg.toLowerCase().includes('float');
       await sendAdminNotification(
