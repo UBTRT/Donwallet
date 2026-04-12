@@ -307,7 +307,7 @@
       <!-- Deposit & Withdrawal Settings -->
       <div class="settings-section">
         <div class="settings-title">💰 Deposit & Withdrawal Settings</div>
-        <div class="settings-sub">Set minimum deposit amount and withdrawal service charge</div>
+        <div class="settings-sub">Set minimum deposit, minimum withdrawal and service charge</div>
         <div class="settings-row">
           <span class="settings-label">Minimum Deposit (UGX)</span>
           <div class="ugx-group">
@@ -315,6 +315,14 @@
             <input type="number" class="ugx-input" id="min-deposit-input" min="500" max="10000000" step="500" placeholder="10000">
           </div>
           <button class="btn btn-save" onclick="saveMinDeposit()">Save</button>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">Minimum Withdrawal (UGX)</span>
+          <div class="ugx-group">
+            <span class="ugx-label">UGX</span>
+            <input type="number" class="ugx-input" id="min-withdraw-input" min="500" max="10000000" step="500" placeholder="5000">
+          </div>
+          <button class="btn btn-save" onclick="saveMinWithdraw()">Save</button>
         </div>
         <div class="settings-row">
           <span class="settings-label">Withdrawal Service Charge</span>
@@ -615,6 +623,7 @@ function loadSettingsUI(){
   document.getElementById('ref-l2-input').value=s.refL2||4;
   document.getElementById('ref-l3-input').value=s.refL3||1;
   document.getElementById('min-deposit-input').value=s.minDeposit||10000;
+  document.getElementById('min-withdraw-input').value=s.minWithdraw||5000;
   // API key — show masked if set
   const apiKeyInp = document.getElementById('marz-api-key-input');
   if(s.marzApiKey){ apiKeyInp.value=s.marzApiKey; }
@@ -647,6 +656,12 @@ async function saveMarzApiKey(){
   if(!val){ toast('Please enter a valid API key','#f87171'); return; }
   await db.ref('settings/marzApiKey').set(val);
   toast('✅ MarzPay API key saved — Payments enabled!');
+}
+async function saveMinWithdraw(){
+  const v=parseInt(document.getElementById('min-withdraw-input').value)||5000;
+  if(v<500){ toast('Minimum withdrawal must be at least UGX 500','#f87171'); return; }
+  await db.ref('settings/minWithdraw').set(v);
+  toast('✅ Minimum withdrawal set to '+fmt(v));
 }
 async function saveMinDeposit(){
   const v=parseInt(document.getElementById('min-deposit-input').value)||10000;
