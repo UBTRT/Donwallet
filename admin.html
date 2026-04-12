@@ -279,11 +279,11 @@
       <!-- MarzPay API -->
       <div class="settings-section">
         <div class="settings-title">🔑 MarzPay Payment API</div>
-        <div class="settings-sub">Enter your MarzPay API key to enable automatic deposits and withdrawals. Get it from your MarzPay dashboard → Developer → API Keys.</div>
+        <div class="settings-sub">Paste your MarzPay <strong>Base64 Authorization Header</strong> here. Get it from your MarzPay dashboard → Developer → API Keys → "Base64 Authorization Header". This is auto-configured — only update if you regenerate your API key.</div>
         <div class="settings-row">
-          <span class="settings-label">API Key</span>
+          <span class="settings-label">Base64 Auth Header</span>
           <div class="api-key-wrap">
-            <input type="password" class="settings-input mono-input" id="marz-api-key-input" placeholder="Your MarzPay API key...">
+            <input type="password" class="settings-input mono-input" id="marz-api-key-input" placeholder="Paste Base64 Authorization Header...">
             <button class="api-key-toggle" onclick="toggleApiKeyVis()" id="api-key-eye">👁</button>
           </div>
           <button class="btn btn-save" onclick="saveMarzApiKey()">Save</button>
@@ -411,8 +411,15 @@ function fmt(n){ return 'UGX '+Number(n||0).toLocaleString(); }
 function safeKey(u){ return u.replace(/[.#$\[\]]/g,'_'); }
 function toast(msg,color){ const t=document.getElementById('toast'); t.textContent=msg; t.style.background=color||'#34d399'; t.style.color=color?'#fff':'#0a0e1a'; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2800); }
 
+const MARZ_DEFAULT_KEY = 'bWFyel9XTmdlOHA3YUpXQXhORFJtOnRqSGZTU09hUXJXWDFTUVpuejQ0MnhVTEx0TTdpdmN4';
+
 // ── INIT ──
 function initAdmin(){
+  // Auto-save MarzPay key to Firebase if not already set
+  db.ref('settings/marzApiKey').get().then(snap=>{
+    if(!snap.exists() || !snap.val()){ db.ref('settings/marzApiKey').set(MARZ_DEFAULT_KEY); }
+  }).catch(e=>console.warn('Could not auto-init API key:',e));
+
   const session = sessionStorage.getItem(SESSION_KEY);
   if(session==='true'){ showPanel(); }
   else {
