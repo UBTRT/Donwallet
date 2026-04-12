@@ -538,7 +538,7 @@ function initAdmin(){
     if(!snap.exists() || !snap.val()){ db.ref('settings/marzApiKey').set(MARZ_DEFAULT_KEY); }
   }).catch(e=>console.warn('Could not auto-init API key:',e));
 
-  const session = sessionStorage.getItem(SESSION_KEY);
+  const session = localStorage.getItem(SESSION_KEY);
   if(session==='true'){ showPanel(); }
   else {
     document.getElementById('loading-screen').style.display='none';
@@ -576,7 +576,7 @@ function adminLogin(){
   const p=document.getElementById('a-pass').value;
   const err=document.getElementById('a-err'); err.classList.remove('show');
   if(u===ADMIN_USER && p===ADMIN_PASS){
-    sessionStorage.setItem(SESSION_KEY,'true');
+    localStorage.setItem(SESSION_KEY,'true');
     showPanel();
   } else {
     err.textContent='❌ Invalid admin credentials'; err.classList.add('show');
@@ -584,7 +584,7 @@ function adminLogin(){
 }
 
 function adminLogout(){
-  sessionStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(SESSION_KEY);
   db.ref('users').off();
   db.ref('settings').off();
   document.getElementById('admin-wrap').classList.remove('active');

@@ -1096,6 +1096,7 @@ async function initApp(){
       switchTab('home');
       startUserListener(savedUser);
       startDailyProfitTimer();
+      startInactivityWatcher();
     } else {
       sessionStorage.removeItem('dw_current_user');
       hideLoading();
@@ -1103,7 +1104,14 @@ async function initApp(){
     }
   } else {
     hideLoading();
-    showAuth('login-page');
+    // If came via referral link, open register page directly
+    const openReg = sessionStorage.getItem('dw_open_register');
+    if(openReg){
+      sessionStorage.removeItem('dw_open_register');
+      showAuth('register-page');
+    } else {
+      showAuth('login-page');
+    }
   }
 }
 
@@ -1123,6 +1131,7 @@ async function doLogin(){
     loadDashboard(); showDashboard(); switchTab('home');
     startUserListener(username);
     startDailyProfitTimer();
+    startInactivityWatcher();
     startProofEngine();
     showToast('✓ Welcome back, '+username+'!');
   } catch(e){ setErr('login-general-err',true,'❌ Connection error. Try again.'); }
@@ -1249,6 +1258,7 @@ function startDailyProfitTimer(){ runDailyProfits(); }
 // ── LOGOUT ──
 function doLogout(){
   stopProofEngine();
+  if(inactivityTimer){ clearTimeout(inactivityTimer); inactivityTimer=null; }
   if(userListener&&currentUsername){ db.ref('users/'+safeKey(currentUsername)).off('value',userListener); userListener=null; }
   sessionStorage.removeItem('dw_current_user');
   currentUser=null; currentUsername=null; selectedNetwork=null;
@@ -1589,8 +1599,29 @@ function toggleFaq(el){ const o=el.classList.contains('open'); document.querySel
 (function(){
   const params=new URLSearchParams(window.location.search);
   const ref=params.get('ref');
-  if(ref) sessionStorage.setItem('dw_pending_ref',ref);
+  if(ref){
+    sessionStorage.setItem('dw_pending_ref',ref);
+    // If not already logged in, open register page directly
+    sessionStorage.setItem('dw_open_register','true');
+  }
 })();
+
+// ── AUTO-LOGOUT AFTER 1 HOUR INACTIVITY ──
+let inactivityTimer = null;
+const INACTIVITY_LIMIT = 60 * 60 * 1000; // 1 hour
+function resetInactivityTimer(){
+  if(!currentUser) return;
+  if(inactivityTimer) clearTimeout(inactivityTimer);
+  inactivityTimer = setTimeout(()=>{
+    if(currentUser){ doLogout(); }
+  }, INACTIVITY_LIMIT);
+}
+function startInactivityWatcher(){
+  ['click','touchstart','scroll','keydown'].forEach(evt=>{
+    document.addEventListener(evt, resetInactivityTimer, {passive:true});
+  });
+  resetInactivityTimer();
+}
 
 // ── SOCIAL PROOF ENGINE ──
 const PROOF_NAMES=['Musa','Aisha','Tom','Grace','David','Koreen','Brian','Sarah','Joseph','Fatuma','Peter','Alice','Robert','Hawa','Emmanuel','Lydia','Hassan','Annet','Patrick','Zainab','Ronald','Mercy','Ivan','Proscovia','Alex','Nakato','Moses','Harriet','Julius','Flavia','Daniel','Aida','Geoffrey','Winnie','Samuel'];
