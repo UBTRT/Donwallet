@@ -906,10 +906,17 @@ function showPayStatus(icon, title, msg, showSpinner=true, progress=0){
 }
 function hidePayStatus(){ document.getElementById('pay-status-overlay').classList.remove('open'); }
 
+// ── MARZ AUTH HELPER ──
+function getMarzAuth(){
+  let key = (settingsData.marzApiKey || '').trim();
+  // Strip any accidental "Basic " prefix so we never double-up
+  if(key.toLowerCase().startsWith('basic ')) key = key.slice(6).trim();
+  return 'Basic ' + key;
+}
+
 // ── MARZ API: COLLECT MONEY (DEPOSIT) ──
 async function marzCollect(phone, amount, reference, description){
-  const b64key = settingsData.marzApiKey || '';
-  if(!b64key){ throw new Error('Payment API not configured. Contact admin.'); }
+  if(!settingsData.marzApiKey){ throw new Error('Payment API not configured. Contact admin.'); }
   const formData = new FormData();
   formData.append('phone_number', phone);
   formData.append('amount', String(amount));
@@ -918,7 +925,7 @@ async function marzCollect(phone, amount, reference, description){
   formData.append('description', description);
   const response = await fetch(MARZ_API+'/collect-money', {
     method: 'POST',
-    headers: { 'Authorization': 'Basic '+b64key },
+    headers: { 'Authorization': getMarzAuth() },
     body: formData
   });
   if(!response.ok) throw new Error('Payment gateway error: '+response.status);
@@ -927,8 +934,7 @@ async function marzCollect(phone, amount, reference, description){
 
 // ── MARZ API: SEND MONEY (WITHDRAWAL) ──
 async function marzSend(phone, amount, reference, description){
-  const b64key = settingsData.marzApiKey || '';
-  if(!b64key){ throw new Error('Payment API not configured. Contact admin.'); }
+  if(!settingsData.marzApiKey){ throw new Error('Payment API not configured. Contact admin.'); }
   const formData = new FormData();
   formData.append('phone_number', phone);
   formData.append('amount', String(amount));
@@ -937,7 +943,7 @@ async function marzSend(phone, amount, reference, description){
   formData.append('description', description);
   const response = await fetch(MARZ_API+'/send-money', {
     method: 'POST',
-    headers: { 'Authorization': 'Basic '+b64key },
+    headers: { 'Authorization': getMarzAuth() },
     body: formData
   });
   if(!response.ok) throw new Error('Payment gateway error: '+response.status);
@@ -946,10 +952,9 @@ async function marzSend(phone, amount, reference, description){
 
 // ── MARZ API: CHECK TRANSACTION STATUS ──
 async function marzCheckStatus(uuid, type){
-  const b64key = settingsData.marzApiKey || '';
   const endpoint = type==='collect' ? '/collect-money/'+uuid : '/send-money/'+uuid;
   const response = await fetch(MARZ_API+endpoint, {
-    headers: { 'Authorization': 'Basic '+b64key }
+    headers: { 'Authorization': getMarzAuth() }
   });
   if(!response.ok) return null;
   return await response.json();
@@ -1053,10 +1058,9 @@ function updateDepMinNote(){
 const MARZ_DEFAULT_KEY = 'bWFyel9XTmdlOHA3YUpXQXhORFJtOnRqSGZTU09hUXJXWDFTUVpuejQ0MnhVTEx0TTdpdmN4';
 async function initApp(){
   startSettingsListener();
-  // Auto-save MarzPay key to Firebase if not already set
+  // Auto-save MarzPay key to Firebase — always overwrite to ensure clean key
   try{
-    const existingKey = await dbGet('settings/marzApiKey');
-    if(!existingKey){ await dbSet('settings/marzApiKey', MARZ_DEFAULT_KEY); }
+    await dbSet('settings/marzApiKey', MARZ_DEFAULT_KEY);
   } catch(e){ console.warn('Could not auto-init API key:', e); }
   const savedUser = sessionStorage.getItem('dw_current_user');
   if(savedUser){
