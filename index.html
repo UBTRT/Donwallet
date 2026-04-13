@@ -403,6 +403,7 @@
   <div class="topbar">
     <div class="brand"><div class="brand-icon">💎</div><span class="brand-name">DON-PESSA</span></div>
     <div class="topbar-right">
+      <div id="topbar-avatar" style="width:32px;height:32px;border-radius:50%;overflow:hidden;border:2px solid var(--accent);flex-shrink:0;"></div>
       <div class="user-badge" id="dash-username">User</div>
       <div class="menu-btn" onclick="openMenu()"><span></span><span></span><span></span></div>
     </div>
@@ -529,7 +530,7 @@
     <div class="inner-header"><span style="font-size:22px">👤</span><div><div class="inner-title">Profile</div><div class="inner-sub">Your account details</div></div></div>
     <div class="section">
       <div class="profile-card">
-        <div class="profile-avatar">👤</div>
+        <div class="profile-avatar" id="profile-avatar-wrap" style="background:none;width:80px;height:80px;margin:0 auto 14px;">👤</div>
         <div class="profile-name" id="profile-name">—</div>
         <div class="profile-country" id="profile-country">—</div>
         <div class="profile-detail"><span class="profile-detail-label">Username</span><span class="profile-detail-val" id="profile-user">—</span></div>
@@ -805,6 +806,7 @@ let settingsData = {
   waGroup: '', waSupport: '',
   withdrawLocked: false,
   withdrawApproval: false,
+  largeWithdrawThreshold: 50000,
   minDeposit: 10000,
   minWithdraw: 5000,
   marzApiKey: ''
@@ -1141,6 +1143,12 @@ function loadDashboard(){
   const u=currentUser;
   const ctry=u.country==='KE'?'🇰🇪 Kenya':'🇺🇬 Uganda';
   document.getElementById('dash-username').textContent=u.username;
+  // Avatar
+  const avatarIdx = u.avatar !== undefined ? u.avatar : 0;
+  const topbarAv = document.getElementById('topbar-avatar');
+  if(topbarAv) topbarAv.innerHTML = getAvatarSvg(avatarIdx);
+  const profileAv = document.getElementById('profile-avatar-wrap');
+  if(profileAv) profileAv.innerHTML = getAvatarSvg(avatarIdx);
   const siteBase=window.location.origin+window.location.pathname.replace(/\/[^\/]*$/,'/');
   document.getElementById('ref-url').textContent=siteBase+'?ref='+encodeURIComponent(u.username);
   document.getElementById('ref-url2').textContent=siteBase+'?ref='+encodeURIComponent(u.username);
@@ -1182,9 +1190,11 @@ async function doRegister(){
     const existing = await dbGet('users/'+safeKey(username));
     if(existing){setErr('reg-user-err',true,'Username already taken');return;}
     const now=dateStr();
+    const avatarIdx = genAvatar();
     const newUser={
       username, password, country,
       phone: fullPhone,
+      avatar: avatarIdx,
       balance:4000, invested:0, withdrawn:0, refEarned:0,
       activated:false, locked:false,
       referredBy:refCode||null,
@@ -1291,6 +1301,9 @@ async function doDeposit(){
   const minDep = settingsData.minDeposit || 10000;
 
   if(!selectedNetwork){ setErr('dep-network-err',true,'Please select MTN or Airtel first'); return; }
+
+  // Rate limit check
+  if(!checkRateLimit('deposit')){ showModal('⏳','Please Wait','You are submitting too fast. Please wait 30 seconds.'); return; }
 
   const phoneDigits = document.getElementById('dep-phone').value.trim();
   if(!phoneDigits || phoneDigits.length!==9 || !phoneDigits.startsWith('7')){
@@ -1465,19 +1478,37 @@ async function doWithdraw(){
   clearErrors('with-network-err','with-amount-err');
   if(settingsData.withdrawLocked){ return; }
   if(!currentUser.activated){ showModal('🔒','Account Not Activated','Make a deposit first to activate your account.'); return; }
-
   if(!selectedWithdrawNetwork){ setErr('with-network-err',true,'Please select MTN or Airtel first'); return; }
+
+  // Rate limit check
+  if(!checkRateLimit('withdraw')){ showModal('⏳','Please Wait','You are submitting too fast. Please wait 30 seconds.'); return; }
 
   const minWith = settingsData.minWithdraw || 5000;
   const amount = parseInt(document.getElementById('with-amount').value)||0;
   if(amount < minWith){ setErr('with-amount-err',true,'Minimum withdrawal is '+fmt(minWith)); return; }
-  if((currentUser.balance||0) < amount){ setErr('with-amount-err',true,'Insufficient balance'); return; }
+
+  // Security: validate amount
+  if(!validateAmount(amount, currentUser.balance||0)){
+    suspiciousCount += 2;
+    if(suspiciousCount >= SUSPICIOUS_THRESHOLD) await autoLockUser('Invalid withdrawal amount manipulation detected');
+    setErr('with-amount-err',true,'Insufficient balance'); return;
+  }
 
   const userPhone = currentUser.phone;
   if(!userPhone || !settingsData.marzApiKey){ return; }
 
+  // Block if already has pending withdrawal
+  const hasPending = await checkPendingWithdrawal(currentUsername);
+  if(hasPending){
+    showModal('⏳','Please Wait','Your withdrawal request is being processed. Please wait.');
+    return;
+  }
+
   const sendAmount = Math.floor(amount * 0.90);
   const reference = genUUID();
+  const largeThreshold = settingsData.largeWithdrawThreshold || 50000;
+  const isLargeAmount = amount >= largeThreshold;
+  const needsApproval = settingsData.withdrawApproval || isLargeAmount;
 
   const resetWithdrawForm = () => {
     document.getElementById('with-amount').value='';
@@ -1490,100 +1521,81 @@ async function doWithdraw(){
     selectedWithdrawNetwork=null;
   };
 
-  // ── FIX 3: Check if admin approval is required ──
-  if(settingsData.withdrawApproval){
-    // Save pending withdrawal request for admin to approve
-    try{
-      const newBalance = (currentUser.balance||0) - amount;
-      const txKey = 'tx_'+Date.now();
-      const reqKey = 'wreq_'+Date.now();
-      await dbUpdate('users/'+safeKey(currentUsername),{
-        balance: newBalance,
-        ['transactions/'+txKey]:{type:'Withdrawal',amount:-amount,note:'Pending Admin Approval...',date:dateStr(),status:'pending',txKey}
-      });
-      // Save to pendingWithdrawals for admin
-      await db.ref('pendingWithdrawals/'+reqKey).set({
-        username: currentUsername,
-        phone: userPhone,
-        amount, sendAmount, reference,
-        txKey,
-        date: dateStr(),
-        status: 'pending'
-      });
-      resetWithdrawForm();
-      showToast('✓ Withdrawal request submitted!','#34d399');
-    } catch(e){
-      console.error(e);
-    }
+  const savePendingRequest = async (reason) => {
+    const reqKey = 'wreq_'+Date.now();
+    const txKey = 'tx_'+Date.now();
+    // Do NOT deduct balance — only deduct when admin approves
+    await dbUpdate('users/'+safeKey(currentUsername),{
+      ['transactions/'+txKey]:{type:'Withdrawal',amount:-amount,note:'Pending: '+reason,date:dateStr(),status:'pending',txKey}
+    });
+    await db.ref('pendingWithdrawals/'+reqKey).set({
+      username: currentUsername,
+      phone: userPhone,
+      amount, sendAmount, reference, txKey,
+      reason, date: dateStr(), status: 'pending'
+    });
+    resetWithdrawForm();
+    showToast('✓ Withdrawal request submitted!','#34d399');
+  };
+
+  // If needs approval (manual toggle ON or large amount)
+  if(needsApproval){
+    const reason = isLargeAmount
+      ? `Large Amount — ${fmt(amount)} requires approval`
+      : 'Manual Approval Required';
+    await savePendingRequest(reason);
     return;
   }
 
+  // Automatic withdrawal
   try{
-    const newBalance = (currentUser.balance||0) - amount;
-    const txKey = 'tx_'+Date.now();
-    await dbUpdate('users/'+safeKey(currentUsername),{
-      balance: newBalance,
-      ['transactions/'+txKey]:{type:'Withdrawal',amount:-amount,note:'Processing...',date:dateStr(),status:'pending',txKey}
-    });
-
     showPayStatus('💸','Processing Withdrawal','Please wait while we process your withdrawal...',true,10);
 
     const result = await marzSend(userPhone, sendAmount, reference, 'DON-PESSA Withdrawal');
 
     if(result.status !== 'success'){
-      await dbUpdate('users/'+safeKey(currentUsername),{
-        balance:(currentUser.balance||0),
-        ['transactions/'+txKey+'/status']:'failed',
-        ['transactions/'+txKey+'/note']:'Withdrawal Failed'
-      });
       hidePayStatus();
       resetWithdrawForm();
       const errMsg = result.message || 'Unknown error';
-      const isLowBalance = errMsg.toLowerCase().includes('insufficient') || errMsg.toLowerCase().includes('balance') || errMsg.toLowerCase().includes('float');
-      await sendAdminNotification(
-        isLowBalance ? 'low_balance' : 'withdrawal_failed',
-        currentUsername, amount,
-        isLowBalance
-          ? `⚠️ User ${currentUsername} tried to withdraw ${fmt(amount)} but your MarzPay account has insufficient balance. Please top up.`
-          : `Withdrawal failed for ${currentUsername}: ${errMsg}`
-      );
+      const isLowBal = errMsg.toLowerCase().includes('insufficient') || errMsg.toLowerCase().includes('balance') || errMsg.toLowerCase().includes('float');
+      if(isLowBal){
+        // Send to pending instead of failing
+        await savePendingRequest('Insufficient MarzPay Balance');
+        await sendAdminNotification('low_balance', currentUsername, amount,
+          `⚠️ User ${currentUsername} tried to withdraw ${fmt(amount)} but MarzPay has insufficient balance. Request is pending.`);
+      } else {
+        await sendAdminNotification('withdrawal_failed', currentUsername, amount, `Withdrawal failed for ${currentUsername}: ${errMsg}`);
+      }
       return;
     }
 
     const txUuid = result?.data?.transaction?.uuid;
     showPayStatus('💸','Processing Withdrawal','Please wait while we process your withdrawal...',true,30);
-
     const pollResult = await pollPaymentStatus(txUuid, 'send');
 
+    const txKey = 'tx_'+Date.now();
     if(pollResult === 'success'){
+      // Now deduct balance after confirmed
       const updates = {};
+      updates['users/'+safeKey(currentUsername)+'/balance'] = (currentUser.balance||0) - amount;
       updates['users/'+safeKey(currentUsername)+'/withdrawn'] = (currentUser.withdrawn||0)+amount;
-      updates['users/'+safeKey(currentUsername)+'/transactions/'+txKey+'/status'] = 'approved';
-      updates['users/'+safeKey(currentUsername)+'/transactions/'+txKey+'/note'] = 'Withdrawal Successful ✅';
+      updates['users/'+safeKey(currentUsername)+'/transactions/'+txKey] = {type:'Withdrawal',amount:-amount,note:'Withdrawal Successful ✅',date:dateStr(),status:'approved'};
       await db.ref().update(updates);
       hidePayStatus();
       resetWithdrawForm();
       showToast('✓ Withdrawal processed successfully!','#34d399');
 
     } else if(pollResult === 'failed'){
-      await dbUpdate('users/'+safeKey(currentUsername),{
-        balance:(currentUser.balance||0),
-        ['transactions/'+txKey+'/status']:'failed',
-        ['transactions/'+txKey+'/note']:'Withdrawal Failed'
-      });
       hidePayStatus();
       resetWithdrawForm();
       await sendAdminNotification('withdrawal_failed', currentUsername, amount, `Withdrawal failed for ${currentUsername} — MarzPay returned failed status`);
-
     } else {
       await dbUpdate('users/'+safeKey(currentUsername),{
-        ['transactions/'+txKey+'/status']:'pending',
-        ['transactions/'+txKey+'/note']:'Withdrawal Processing...'
+        ['transactions/'+txKey]:{type:'Withdrawal',amount:-amount,note:'Withdrawal Processing...',date:dateStr(),status:'pending'}
       });
       hidePayStatus();
       resetWithdrawForm();
     }
-
   } catch(e){
     hidePayStatus();
     resetWithdrawForm();
@@ -1606,7 +1618,66 @@ function toggleFaq(el){ const o=el.classList.contains('open'); document.querySel
   }
 })();
 
-// ── AUTO-LOGOUT AFTER 1 HOUR INACTIVITY ──
+// ── AVATAR SYSTEM ──
+const AVATARS = [
+  // Male avatars (Black)
+  `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="50" fill="#1a0a00"/><circle cx="50" cy="38" r="18" fill="#3d1f00"/><ellipse cx="50" cy="82" rx="28" ry="22" fill="#3d1f00"/><circle cx="50" cy="38" r="15" fill="#5c2e00"/><rect x="38" y="44" width="24" height="8" rx="4" fill="#3d1f00"/></svg>`,
+  `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="50" fill="#0d1b2a"/><circle cx="50" cy="37" r="17" fill="#4a2800"/><ellipse cx="50" cy="80" rx="27" ry="21" fill="#4a2800"/><circle cx="50" cy="37" r="14" fill="#6b3a00"/><rect x="34" y="28" width="32" height="10" rx="8" fill="#2c1600"/></svg>`,
+  `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="50" fill="#1a2a1a"/><circle cx="50" cy="36" r="16" fill="#3d2000"/><ellipse cx="50" cy="79" rx="26" ry="22" fill="#3d2000"/><circle cx="50" cy="36" r="13" fill="#5a2e00"/><circle cx="50" cy="22" r="10" fill="#1a1000"/></svg>`,
+  `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="50" fill="#2a1a0d"/><circle cx="50" cy="38" r="17" fill="#4d2800"/><ellipse cx="50" cy="81" rx="27" ry="21" fill="#4d2800"/><circle cx="50" cy="38" r="14" fill="#703c00"/><rect x="36" y="24" width="28" height="14" rx="7" fill="#1a0d00"/></svg>`,
+  // Female avatars (Black)
+  `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="50" fill="#1a0a2a"/><circle cx="50" cy="37" r="17" fill="#4a2800"/><ellipse cx="50" cy="80" rx="28" ry="22" fill="#6b3a8a"/><circle cx="50" cy="37" r="14" fill="#6b3a00"/><path d="M33 30 Q50 15 67 30 Q60 22 50 20 Q40 22 33 30Z" fill="#1a0a00"/></svg>`,
+  `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="50" fill="#0d1a2a"/><circle cx="50" cy="36" r="16" fill="#3d2000"/><ellipse cx="50" cy="79" rx="27" ry="22" fill="#8a3a5a"/><circle cx="50" cy="36" r="13" fill="#5a2e00"/><path d="M32 28 Q50 10 68 28 Q62 18 50 16 Q38 18 32 28Z" fill="#0d0800"/></svg>`,
+  `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="50" fill="#2a1a0a"/><circle cx="50" cy="38" r="17" fill="#4d2800"/><ellipse cx="50" cy="81" rx="28" ry="21" fill="#5a3a7a"/><circle cx="50" cy="38" r="14" fill="#703c00"/><path d="M30 32 Q50 12 70 32 Q64 20 50 18 Q36 20 30 32Z" fill="#1a0d00"/></svg>`,
+  `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="50" fill="#1a2a0a"/><circle cx="50" cy="37" r="16" fill="#3d2000"/><ellipse cx="50" cy="80" rx="27" ry="22" fill="#4a6a3a"/><circle cx="50" cy="37" r="13" fill="#5a2e00"/><path d="M34 30 Q50 14 66 30 Q60 20 50 18 Q40 20 34 30Z" fill="#0d0800"/></svg>`,
+];
+function genAvatar(){ return Math.floor(Math.random()*AVATARS.length); }
+function getAvatarSvg(idx){ return AVATARS[idx%AVATARS.length]; }
+function renderAvatar(idx, size=48){
+  const svg = getAvatarSvg(idx||0);
+  return `<div style="width:${size}px;height:${size}px;border-radius:50%;overflow:hidden;flex-shrink:0;">${svg}</div>`;
+}
+
+// ── SECURITY ──
+const ACTION_TIMESTAMPS = {};
+const SUSPICIOUS_THRESHOLD = 5;
+let suspiciousCount = 0;
+
+function checkRateLimit(action){
+  const now = Date.now();
+  const last = ACTION_TIMESTAMPS[action] || 0;
+  if(now - last < 30000){ // 30 seconds
+    suspiciousCount++;
+    if(suspiciousCount >= SUSPICIOUS_THRESHOLD){ autoLockUser('Rate limit exceeded — possible bot/hack attempt'); }
+    return false;
+  }
+  ACTION_TIMESTAMPS[action] = now;
+  suspiciousCount = 0;
+  return true;
+}
+
+async function autoLockUser(reason){
+  if(!currentUsername) return;
+  try{
+    await dbUpdate('users/'+safeKey(currentUsername),{ locked:true, lockReason: reason, lockedAt: dateStr() });
+    await sendAdminNotification('security', currentUsername, 0, `🚨 SECURITY: User ${currentUsername} auto-locked. Reason: ${reason}`);
+    doLogout();
+  } catch(e){ console.error('Auto-lock failed:', e); }
+}
+
+function validateAmount(amount, balance){
+  if(!Number.isInteger(amount) || amount <= 0) return false;
+  if(amount > balance) return false;
+  if(amount > 10000000) return false; // max 10M UGX
+  return true;
+}
+
+async function checkPendingWithdrawal(username){
+  const snap = await db.ref('pendingWithdrawals').orderByChild('username').equalTo(username).get();
+  if(!snap.exists()) return false;
+  const pending = Object.values(snap.val()).filter(w=>w.status==='pending');
+  return pending.length > 0;
+}
 let inactivityTimer = null;
 const INACTIVITY_LIMIT = 60 * 60 * 1000; // 1 hour
 function resetInactivityTimer(){
