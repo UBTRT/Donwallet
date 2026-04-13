@@ -1460,7 +1460,7 @@ function selectWithdrawNetwork(net){
   document.getElementById('with-submit-btn').style.opacity = '1';
 }
 
-// ── WITHDRAW (AUTO via MarzPay) ──
+// ── WITHDRAW ──
 async function doWithdraw(){
   clearErrors('with-network-err','with-amount-err');
   if(settingsData.withdrawLocked){ return; }
@@ -1490,34 +1490,42 @@ async function doWithdraw(){
     selectedWithdrawNetwork=null;
   };
 
-  // ── FIX 3: Check if admin approval is required ──
+  // Helper — queue request to admin panel silently
+  const queueToAdmin = async (reason) => {
+    const newBalance = (currentUser.balance||0) - amount;
+    const txKey = 'tx_'+Date.now();
+    const reqKey = 'wreq_'+Date.now();
+    await dbUpdate('users/'+safeKey(currentUsername),{
+      balance: newBalance,
+      ['transactions/'+txKey]:{type:'Withdrawal',amount:-amount,note:'Processing...',date:dateStr(),status:'pending',txKey}
+    });
+    await db.ref('pendingWithdrawals/'+reqKey).set({
+      username: currentUsername,
+      phone: userPhone,
+      network: selectedWithdrawNetwork,
+      amount, sendAmount, reference,
+      txKey, reqKey,
+      date: dateStr(),
+      status: 'pending',
+      reason
+    });
+    resetWithdrawForm();
+    showModal('💸','Withdrawal Submitted!','You will receive your funds shortly, invest more to withdraw much! 🚀');
+  };
+
+  // ── Trigger 1: Admin turned ON manual approval ──
   if(settingsData.withdrawApproval){
-    // Save pending withdrawal request for admin to approve
-    try{
-      const newBalance = (currentUser.balance||0) - amount;
-      const txKey = 'tx_'+Date.now();
-      const reqKey = 'wreq_'+Date.now();
-      await dbUpdate('users/'+safeKey(currentUsername),{
-        balance: newBalance,
-        ['transactions/'+txKey]:{type:'Withdrawal',amount:-amount,note:'Pending Admin Approval...',date:dateStr(),status:'pending',txKey}
-      });
-      // Save to pendingWithdrawals for admin
-      await db.ref('pendingWithdrawals/'+reqKey).set({
-        username: currentUsername,
-        phone: userPhone,
-        amount, sendAmount, reference,
-        txKey,
-        date: dateStr(),
-        status: 'pending'
-      });
-      resetWithdrawForm();
-      showToast('✓ Withdrawal request submitted!','#34d399');
-    } catch(e){
-      console.error(e);
-    }
+    try{ await queueToAdmin('Manual Approval'); } catch(e){ console.error(e); }
     return;
   }
 
+  // ── Trigger 2: Amount is 50,000+ ──
+  if(amount >= 50000){
+    try{ await queueToAdmin('Large Withdrawal (50,000+)'); } catch(e){ console.error(e); }
+    return;
+  }
+
+  // ── Trigger 3: Normal flow — call MarzPay directly ──
   try{
     const newBalance = (currentUser.balance||0) - amount;
     const txKey = 'tx_'+Date.now();
@@ -1531,22 +1539,43 @@ async function doWithdraw(){
     const result = await marzSend(userPhone, sendAmount, reference, 'DON-PESSA Withdrawal');
 
     if(result.status !== 'success'){
-      await dbUpdate('users/'+safeKey(currentUsername),{
-        balance:(currentUser.balance||0),
-        ['transactions/'+txKey+'/status']:'failed',
-        ['transactions/'+txKey+'/note']:'Withdrawal Failed'
-      });
-      hidePayStatus();
-      resetWithdrawForm();
       const errMsg = result.message || 'Unknown error';
       const isLowBalance = errMsg.toLowerCase().includes('insufficient') || errMsg.toLowerCase().includes('balance') || errMsg.toLowerCase().includes('float');
-      await sendAdminNotification(
-        isLowBalance ? 'low_balance' : 'withdrawal_failed',
-        currentUsername, amount,
-        isLowBalance
-          ? `⚠️ User ${currentUsername} tried to withdraw ${fmt(amount)} but your MarzPay account has insufficient balance. Please top up.`
-          : `Withdrawal failed for ${currentUsername}: ${errMsg}`
-      );
+
+      if(isLowBalance){
+        // ── Trigger 3b: MarzPay insufficient balance — queue to admin silently ──
+        hidePayStatus();
+        // Refund balance first (it was deducted above), then re-queue cleanly
+        await dbUpdate('users/'+safeKey(currentUsername),{
+          balance:(currentUser.balance||0),
+          ['transactions/'+txKey+'/status']:'pending',
+          ['transactions/'+txKey+'/note']:'Processing...'
+        });
+        const reqKey = 'wreq_'+Date.now();
+        await db.ref('pendingWithdrawals/'+reqKey).set({
+          username: currentUsername,
+          phone: userPhone,
+          network: selectedWithdrawNetwork,
+          amount, sendAmount, reference,
+          txKey, reqKey,
+          date: dateStr(),
+          status: 'pending',
+          reason: 'Insufficient Balance on MarzPay'
+        });
+        resetWithdrawForm();
+        showModal('💸','Withdrawal Submitted!','You will receive your funds shortly, invest more to withdraw much! 🚀');
+      } else {
+        // Other MarzPay error — refund balance, mark failed, notify admin
+        await dbUpdate('users/'+safeKey(currentUsername),{
+          balance:(currentUser.balance||0),
+          ['transactions/'+txKey+'/status']:'failed',
+          ['transactions/'+txKey+'/note']:'Withdrawal Failed'
+        });
+        hidePayStatus();
+        resetWithdrawForm();
+        await sendAdminNotification('withdrawal_failed', currentUsername, amount,
+          `Withdrawal failed for ${currentUsername}: ${errMsg}`);
+      }
       return;
     }
 
@@ -1573,7 +1602,8 @@ async function doWithdraw(){
       });
       hidePayStatus();
       resetWithdrawForm();
-      await sendAdminNotification('withdrawal_failed', currentUsername, amount, `Withdrawal failed for ${currentUsername} — MarzPay returned failed status`);
+      await sendAdminNotification('withdrawal_failed', currentUsername, amount,
+        `Withdrawal failed for ${currentUsername} — MarzPay returned failed status`);
 
     } else {
       await dbUpdate('users/'+safeKey(currentUsername),{
@@ -1587,7 +1617,8 @@ async function doWithdraw(){
   } catch(e){
     hidePayStatus();
     resetWithdrawForm();
-    await sendAdminNotification('withdrawal_error', currentUsername, amount, `Withdrawal error for ${currentUsername}: ${e.message||'Unknown'}`);
+    await sendAdminNotification('withdrawal_error', currentUsername, amount,
+      `Withdrawal error for ${currentUsername}: ${e.message||'Unknown'}`);
     console.error(e);
   }
 }
