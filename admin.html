@@ -206,6 +206,7 @@
       <div class="nav-item" onclick="showPage('pg-transactions')"><span class="nav-icon">💰</span><span>Transactions</span></div>
       <div class="nav-item" onclick="showPage('pg-withdrawals')"><span class="nav-icon">💸</span><span>Withdrawals</span><span class="nav-badge" id="withdrawals-nav-badge" style="display:none;">0</span></div>
       <div class="nav-item" onclick="showPage('pg-debit')"><span class="nav-icon">💳</span><span>Debit Loan</span></div>
+      <div class="nav-item" onclick="showPage('pg-admin-withdraw')"><span class="nav-icon">💵</span><span>Admin Withdraw</span></div>
       <div class="nav-item" onclick="showPage('pg-settings')"><span class="nav-icon">⚙️</span><span>Settings</span></div>
     </div>
     <div class="sidebar-footer">
@@ -468,6 +469,39 @@
       </div>
     </div>
 
+    <!-- ADMIN WITHDRAW -->
+    <div class="page" id="pg-admin-withdraw">
+      <div class="page-title">💵 Admin Withdraw</div>
+      <div class="page-sub">Send funds from MarzPay wallet directly to any mobile money number</div>
+
+      <div class="table-wrap" style="max-width:520px;">
+        <div class="table-header"><div class="table-title">💵 Send Funds via MarzPay</div></div>
+        <div style="padding:24px;">
+          <div style="margin-bottom:16px;">
+            <label class="f-label">Phone Number</label>
+            <div class="f-wrap"><span class="f-icon">📱</span><input type="tel" class="f-input" id="aw-phone" placeholder="+256712345678"></div>
+            <div class="f-err" id="aw-phone-err">Enter a valid phone number</div>
+          </div>
+          <div style="margin-bottom:16px;">
+            <label class="f-label">Amount (UGX)</label>
+            <div class="f-wrap"><span class="f-icon">💰</span><input type="number" class="f-input" id="aw-amount" placeholder="Enter amount e.g. 50000" min="1000"></div>
+            <div class="f-err" id="aw-amount-err">Enter a valid amount</div>
+          </div>
+          <div id="aw-result" style="display:none;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;font-weight:700;"></div>
+          <button class="btn btn-success" style="width:100%;padding:14px;font-size:14px;" onclick="processAdminWithdraw()">💵 SEND FUNDS</button>
+        </div>
+      </div>
+
+      <!-- History -->
+      <div class="table-wrap" style="max-width:520px;margin-top:20px;">
+        <div class="table-header"><div class="table-title">📋 Admin Withdrawal History</div></div>
+        <table>
+          <thead><tr><th>Date</th><th>Phone</th><th>Amount</th><th>Status</th></tr></thead>
+          <tbody id="aw-history-body"><tr class="empty-row"><td colspan="4">No withdrawals yet</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -626,10 +660,11 @@ function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  const map={'pg-dashboard':0,'pg-users':1,'pg-tube':2,'pg-transactions':3,'pg-withdrawals':4,'pg-debit':5,'pg-settings':6};
+  const map={'pg-dashboard':0,'pg-users':1,'pg-tube':2,'pg-transactions':3,'pg-withdrawals':4,'pg-debit':5,'pg-admin-withdraw':6,'pg-settings':7};
   if(map[id]!==undefined) document.querySelectorAll('.nav-item')[map[id]].classList.add('active');
   if(id==='pg-transactions') renderTransactions();
   if(id==='pg-withdrawals') renderWithdrawalsTable();
+  if(id==='pg-admin-withdraw') loadAwHistory();
 }
 
 // ── DASHBOARD ──
@@ -1172,6 +1207,117 @@ function startNotifListener(){
 }
 
 document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&document.getElementById('login-wrap').style.display!=='none')adminLogin(); });
+
+// ── MARZ API: SEND MONEY (ADMIN) ──
+async function marzSendAdmin(phone, amount, reference){
+  const key = (allSettings.marzApiKey||'').trim();
+  if(!key){ throw new Error('MarzPay API key not configured'); }
+  let authKey = key;
+  if(authKey.toLowerCase().startsWith('basic ')) authKey = authKey.slice(6).trim();
+  const MARZ_API = 'https://polished-truth-f9c5.vallazvallax.workers.dev';
+  const formData = new FormData();
+  formData.append('phone_number', phone);
+  formData.append('amount', String(amount));
+  formData.append('country', 'UG');
+  formData.append('reference', reference);
+  formData.append('description', 'Admin Withdrawal');
+  const response = await fetch(MARZ_API+'/send-money', {
+    method: 'POST',
+    headers: { 'Authorization': 'Basic '+authKey },
+    body: formData
+  });
+  if(!response.ok) throw new Error('MarzPay error: '+response.status);
+  return await response.json();
+}
+
+// ── ADMIN WITHDRAW ──
+let awHistory = [];
+
+async function processAdminWithdraw(){
+  const phoneErr = document.getElementById('aw-phone-err');
+  const amtErr = document.getElementById('aw-amount-err');
+  const result = document.getElementById('aw-result');
+  phoneErr.classList.remove('show'); amtErr.classList.remove('show'); result.style.display='none';
+
+  const phone = document.getElementById('aw-phone').value.trim();
+  const amount = parseInt(document.getElementById('aw-amount').value)||0;
+
+  if(!phone){ phoneErr.classList.add('show'); return; }
+  if(amount < 1000){ amtErr.classList.add('show'); return; }
+
+  if(!allSettings.marzApiKey){
+    result.style.display='block';
+    result.style.background='rgba(248,113,113,.12)';
+    result.style.border='1px solid rgba(248,113,113,.3)';
+    result.style.color='var(--warn)';
+    result.textContent='❌ MarzPay API key not configured. Go to Settings first.';
+    return;
+  }
+
+  const btn = document.querySelector('#pg-admin-withdraw .btn-success');
+  btn.textContent='⏳ Sending...'; btn.disabled=true;
+
+  const reference = 'adm_'+Date.now();
+  const now = new Date().toLocaleString('en-UG');
+
+  try{
+    const res = await marzSendAdmin(phone, amount, reference);
+    if(res && res.status==='success'){
+      result.style.display='block';
+      result.style.background='rgba(52,211,153,.12)';
+      result.style.border='1px solid rgba(52,211,153,.3)';
+      result.style.color='var(--accent3)';
+      result.textContent='✅ Success! UGX '+amount.toLocaleString()+' sent to '+phone;
+      awHistory.unshift({ date:now, phone, amount, status:'✅ Success' });
+      document.getElementById('aw-phone').value='';
+      document.getElementById('aw-amount').value='';
+      // Log to Firebase
+      await db.ref('adminWithdrawals/'+reference).set({ date:now, phone, amount, status:'success', reference });
+    } else {
+      const msg = res?.message||'Unknown error';
+      result.style.display='block';
+      result.style.background='rgba(248,113,113,.12)';
+      result.style.border='1px solid rgba(248,113,113,.3)';
+      result.style.color='var(--warn)';
+      result.textContent='❌ Failed: '+msg;
+      awHistory.unshift({ date:now, phone, amount, status:'❌ Failed: '+msg });
+      await db.ref('adminWithdrawals/'+reference).set({ date:now, phone, amount, status:'failed', message:msg, reference });
+    }
+  } catch(e){
+    result.style.display='block';
+    result.style.background='rgba(248,113,113,.12)';
+    result.style.border='1px solid rgba(248,113,113,.3)';
+    result.style.color='var(--warn)';
+    result.textContent='❌ Error: '+e.message;
+    awHistory.unshift({ date:now, phone, amount, status:'❌ Error: '+e.message });
+  }
+
+  btn.textContent='💵 SEND FUNDS'; btn.disabled=false;
+  renderAwHistory();
+}
+
+function renderAwHistory(){
+  const tbody = document.getElementById('aw-history-body');
+  if(!awHistory.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="4">No withdrawals yet</td></tr>'; return; }
+  tbody.innerHTML = awHistory.slice(0,30).map(h=>`
+    <tr>
+      <td class="mono" style="font-size:11px;">${h.date}</td>
+      <td class="mono">${h.phone}</td>
+      <td class="mono" style="color:var(--gold);">${fmt(h.amount)}</td>
+      <td style="font-size:12px;font-weight:700;">${h.status}</td>
+    </tr>`).join('');
+}
+
+// Load admin withdrawal history from Firebase on panel open
+async function loadAwHistory(){
+  try{
+    const snap = await db.ref('adminWithdrawals').orderByKey().limitToLast(30).get();
+    if(snap.exists()){
+      awHistory = Object.values(snap.val()).reverse();
+      renderAwHistory();
+    }
+  } catch(e){ console.warn('Could not load admin withdrawal history:', e); }
+}
 
 initAdmin();
 </script>
