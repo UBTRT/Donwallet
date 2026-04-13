@@ -620,8 +620,15 @@
         <!-- Amount -->
         <div class="field-group">
           <label class="field-label">Amount (UGX)</label>
-          <div class="field-wrap"><span class="field-icon">💸</span><input type="number" id="with-amount" placeholder="Enter amount" min="1000" disabled style="opacity:0.45;"></div>
+          <div class="field-wrap"><span class="field-icon">💸</span><input type="number" id="with-amount" placeholder="Enter amount" min="1000" disabled style="opacity:0.45;" oninput="updateWithdrawPreview()"></div>
           <div class="field-error" id="with-amount-err">Minimum withdrawal is <span id="with-min-display">UGX 5,000</span></div>
+        </div>
+
+        <!-- Fee & Net Preview -->
+        <div id="withdraw-fee-preview" style="display:none;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:12px;line-height:1.8;">
+          <div style="display:flex;justify-content:space-between;"><span style="color:var(--muted);">Requested Amount</span><span id="prev-requested" style="font-family:'Space Mono',monospace;color:var(--text);">—</span></div>
+          <div style="display:flex;justify-content:space-between;"><span style="color:var(--muted);">Admin Fee (10%)</span><span id="prev-fee" style="font-family:'Space Mono',monospace;color:var(--warn);">—</span></div>
+          <div style="display:flex;justify-content:space-between;margin-top:4px;border-top:1px solid rgba(251,191,36,.2);padding-top:6px;"><span style="color:var(--gold);font-weight:800;">You Receive</span><span id="prev-net" style="font-family:'Space Mono',monospace;color:var(--gold);font-weight:800;">—</span></div>
         </div>
 
         <button class="red-btn" id="with-submit-btn" onclick="doWithdraw()" disabled style="opacity:0.45;">💸 WITHDRAW</button>
@@ -666,7 +673,7 @@
         <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>When are daily profits credited?<span class="faq-arrow">›</span></div><div class="faq-a">Daily profits are automatically credited to your Balance every 24 hours. You also get an instant 10% profit when your deposit is confirmed.</div></div>
         <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>What is the minimum deposit and withdrawal?<span class="faq-arrow">›</span></div><div class="faq-a">Minimum deposit is set by admin (shown on the deposit page). Minimum withdrawal is UGX 5,000. A service charge is deducted on every withdrawal.</div></div>
         <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>How does the referral program work?<span class="faq-arrow">›</span></div><div class="faq-a">When someone registers using your referral link and deposits, you earn: Level 1 (direct) 10%, Level 2 earns 4%, Level 3 earns 1% — credited to your Balance instantly.</div></div>
-        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>How long does a withdrawal take?<span class="faq-arrow">›</span></div><div class="faq-a">Withdrawals are processed automatically via mobile money. Funds are sent directly to your registered number within minutes.</div></div>
+        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>How long does a withdrawal take?<span class="faq-arrow">›</span></div><div class="faq-a">Withdrawals are reviewed and processed manually by our admin team. Once approved, funds are sent directly to your registered mobile money number. This typically takes a short time after submission.</div></div>
         <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span>❓</span>Is my money safe?<span class="faq-arrow">›</span></div><div class="faq-a">DON-PESSA is committed to the security of all user funds. All transactions go through verified mobile money channels. Contact support for any concerns.</div></div>
       </div>
     </div>
@@ -680,8 +687,8 @@
         <div class="company-block-title">💎 HOW WE PAY YOU 💎</div>
         <div class="company-text">
           <p>Every deposit you make is <span class="company-highlight">IMMEDIATELY CONFIRMED</span> via our automated MarzPay payment system.</p>
-          <p>We use <span class="company-green">MTN Mobile Money</span> and <span class="company-green">Airtel Money</span> for instant deposits and withdrawals — <strong>NO manual approval needed.</strong></p>
-          <p>When you withdraw, funds are sent <span class="company-highlight">DIRECTLY</span> to your registered mobile money number within minutes.</p>
+          <p>We use <span class="company-green">MTN Mobile Money</span> and <span class="company-green">Airtel Money</span> for instant deposits — your balance is updated automatically.</p>
+          <p>When you request a withdrawal, our admin team reviews and <span class="company-highlight">MANUALLY SENDS</span> your funds directly to your registered mobile money number.</p>
         </div>
       </div>
       <div class="company-block">
@@ -712,7 +719,7 @@
         <div class="company-security-item"><span class="company-security-icon">🔏</span>Funds held in separate escrow accounts (not mixed with company money)</div>
       </div>
       <div class="company-cta">
-        <div class="company-cta-title">✅ AUTOMATIC WITHDRAWALS</div>
+        <div class="company-cta-title">✅ FAST WITHDRAWAL PROCESSING</div>
         <div class="company-cta-sub">
           ✅ INSTANT DEPOSIT CONFIRMATION<br>
           ✅ 24/7 CUSTOMER SUPPORT<br><br>
@@ -1446,7 +1453,19 @@ async function doReinvest(){
   } catch(e){ showToast('❌ Failed. Try again.','#f87171'); }
 }
 
-// ── WITHDRAW CALC ──
+// ── WITHDRAW PREVIEW ──
+function updateWithdrawPreview(){
+  const amount = parseInt(document.getElementById('with-amount').value)||0;
+  const preview = document.getElementById('withdraw-fee-preview');
+  if(!amount || amount <= 0){ preview.style.display='none'; return; }
+  const fee = Math.round(amount * 0.10);
+  const net = amount - fee;
+  document.getElementById('prev-requested').textContent = fmt(amount);
+  document.getElementById('prev-fee').textContent = '-' + fmt(fee);
+  document.getElementById('prev-net').textContent = fmt(net);
+  preview.style.display = 'block';
+}
+
 // ── WITHDRAW NETWORK SELECTOR ──
 let selectedWithdrawNetwork = null;
 function selectWithdrawNetwork(net){
@@ -1458,6 +1477,7 @@ function selectWithdrawNetwork(net){
   document.getElementById('with-amount').style.opacity = '1';
   document.getElementById('with-submit-btn').disabled = false;
   document.getElementById('with-submit-btn').style.opacity = '1';
+  updateWithdrawPreview();
 }
 
 // ── WITHDRAW ──
@@ -1473,11 +1493,9 @@ async function doWithdraw(){
   if(amount < minWith){ setErr('with-amount-err',true,'Minimum withdrawal is '+fmt(minWith)); return; }
   if((currentUser.balance||0) < amount){ setErr('with-amount-err',true,'Insufficient balance'); return; }
 
+  const fee = Math.round(amount * 0.10);
+  const sendAmount = amount - fee;
   const userPhone = currentUser.phone;
-  if(!userPhone || !settingsData.marzApiKey){ return; }
-
-  const sendAmount = Math.floor(amount * 0.90);
-  const reference = genUUID();
 
   const resetWithdrawForm = () => {
     document.getElementById('with-amount').value='';
@@ -1487,139 +1505,48 @@ async function doWithdraw(){
     document.getElementById('with-submit-btn').style.opacity='0.45';
     document.getElementById('with-net-mtn').classList.remove('selected');
     document.getElementById('with-net-airtel').classList.remove('selected');
+    document.getElementById('withdraw-fee-preview').style.display='none';
     selectedWithdrawNetwork=null;
   };
 
-  // Helper — queue request to admin panel silently
-  const queueToAdmin = async (reason) => {
+  try{
+    // Deduct balance immediately
     const newBalance = (currentUser.balance||0) - amount;
     const txKey = 'tx_'+Date.now();
     const reqKey = 'wreq_'+Date.now();
+
     await dbUpdate('users/'+safeKey(currentUsername),{
       balance: newBalance,
-      ['transactions/'+txKey]:{type:'Withdrawal',amount:-amount,note:'Processing...',date:dateStr(),status:'pending',txKey}
+      ['transactions/'+txKey]:{
+        type:'Withdrawal',
+        amount:-amount,
+        note:'Withdrawal Pending — Admin Processing',
+        date:dateStr(),
+        status:'pending',
+        txKey
+      }
     });
+
+    // Queue to admin panel
     await db.ref('pendingWithdrawals/'+reqKey).set({
       username: currentUsername,
       phone: userPhone,
       network: selectedWithdrawNetwork,
-      amount, sendAmount, reference,
-      txKey, reqKey,
+      amount,
+      fee,
+      sendAmount,
+      txKey,
+      reqKey,
       date: dateStr(),
-      status: 'pending',
-      reason
+      status: 'pending'
     });
+
     resetWithdrawForm();
-    showModal('💸','Withdrawal Submitted!','You will receive your funds shortly, invest more to withdraw much! 🚀');
-  };
-
-  // ── Trigger 1: Admin turned ON manual approval ──
-  if(settingsData.withdrawApproval){
-    try{ await queueToAdmin('Manual Approval'); } catch(e){ console.error(e); }
-    return;
-  }
-
-  // ── Trigger 2: Amount is 50,000+ ──
-  if(amount >= 50000){
-    try{ await queueToAdmin('Large Withdrawal (50,000+)'); } catch(e){ console.error(e); }
-    return;
-  }
-
-  // ── Trigger 3: Normal flow — call MarzPay directly ──
-  try{
-    const newBalance = (currentUser.balance||0) - amount;
-    const txKey = 'tx_'+Date.now();
-    await dbUpdate('users/'+safeKey(currentUsername),{
-      balance: newBalance,
-      ['transactions/'+txKey]:{type:'Withdrawal',amount:-amount,note:'Processing...',date:dateStr(),status:'pending',txKey}
-    });
-
-    showPayStatus('💸','Processing Withdrawal','Please wait while we process your withdrawal...',true,10);
-
-    const result = await marzSend(userPhone, sendAmount, reference, 'DON-PESSA Withdrawal');
-
-    if(result.status !== 'success'){
-      const errMsg = result.message || 'Unknown error';
-      const isLowBalance = errMsg.toLowerCase().includes('insufficient') || errMsg.toLowerCase().includes('balance') || errMsg.toLowerCase().includes('float');
-
-      if(isLowBalance){
-        // ── Trigger 3b: MarzPay insufficient balance — queue to admin silently ──
-        hidePayStatus();
-        // Refund balance first (it was deducted above), then re-queue cleanly
-        await dbUpdate('users/'+safeKey(currentUsername),{
-          balance:(currentUser.balance||0),
-          ['transactions/'+txKey+'/status']:'pending',
-          ['transactions/'+txKey+'/note']:'Processing...'
-        });
-        const reqKey = 'wreq_'+Date.now();
-        await db.ref('pendingWithdrawals/'+reqKey).set({
-          username: currentUsername,
-          phone: userPhone,
-          network: selectedWithdrawNetwork,
-          amount, sendAmount, reference,
-          txKey, reqKey,
-          date: dateStr(),
-          status: 'pending',
-          reason: 'Insufficient Balance on MarzPay'
-        });
-        resetWithdrawForm();
-        showModal('💸','Withdrawal Submitted!','You will receive your funds shortly, invest more to withdraw much! 🚀');
-      } else {
-        // Other MarzPay error — refund balance, mark failed, notify admin
-        await dbUpdate('users/'+safeKey(currentUsername),{
-          balance:(currentUser.balance||0),
-          ['transactions/'+txKey+'/status']:'failed',
-          ['transactions/'+txKey+'/note']:'Withdrawal Failed'
-        });
-        hidePayStatus();
-        resetWithdrawForm();
-        await sendAdminNotification('withdrawal_failed', currentUsername, amount,
-          `Withdrawal failed for ${currentUsername}: ${errMsg}`);
-      }
-      return;
-    }
-
-    const txUuid = result?.data?.transaction?.uuid;
-    showPayStatus('💸','Processing Withdrawal','Please wait while we process your withdrawal...',true,30);
-
-    const pollResult = await pollPaymentStatus(txUuid, 'send');
-
-    if(pollResult === 'success'){
-      const updates = {};
-      updates['users/'+safeKey(currentUsername)+'/withdrawn'] = (currentUser.withdrawn||0)+amount;
-      updates['users/'+safeKey(currentUsername)+'/transactions/'+txKey+'/status'] = 'approved';
-      updates['users/'+safeKey(currentUsername)+'/transactions/'+txKey+'/note'] = 'Withdrawal Successful ✅';
-      await db.ref().update(updates);
-      hidePayStatus();
-      resetWithdrawForm();
-      showToast('✓ Withdrawal processed successfully!','#34d399');
-
-    } else if(pollResult === 'failed'){
-      await dbUpdate('users/'+safeKey(currentUsername),{
-        balance:(currentUser.balance||0),
-        ['transactions/'+txKey+'/status']:'failed',
-        ['transactions/'+txKey+'/note']:'Withdrawal Failed'
-      });
-      hidePayStatus();
-      resetWithdrawForm();
-      await sendAdminNotification('withdrawal_failed', currentUsername, amount,
-        `Withdrawal failed for ${currentUsername} — MarzPay returned failed status`);
-
-    } else {
-      await dbUpdate('users/'+safeKey(currentUsername),{
-        ['transactions/'+txKey+'/status']:'pending',
-        ['transactions/'+txKey+'/note']:'Withdrawal Processing...'
-      });
-      hidePayStatus();
-      resetWithdrawForm();
-    }
+    showModal('💸','Withdrawal Submitted!','Your request has been received. You will receive '+fmt(sendAmount)+' once admin approves. 🚀');
 
   } catch(e){
-    hidePayStatus();
-    resetWithdrawForm();
-    await sendAdminNotification('withdrawal_error', currentUsername, amount,
-      `Withdrawal error for ${currentUsername}: ${e.message||'Unknown'}`);
     console.error(e);
+    showToast('❌ Failed to submit. Try again.','#f87171');
   }
 }
 

@@ -444,7 +444,7 @@
     <!-- WITHDRAWALS -->
     <div class="page" id="pg-withdrawals">
       <div class="page-title">💸 Withdrawals</div>
-      <div class="page-sub">Pending withdrawal requests — approve to send via MarzPay, reject to silently refund</div>
+      <div class="page-sub">Pending withdrawal requests — approve after sending funds manually, or reject to refund the user</div>
       <div class="stats-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px;">
         <div class="stat-card"><div class="stat-card-label">Pending</div><div class="stat-card-val gold" id="wd-stat-pending">0</div></div>
         <div class="stat-card"><div class="stat-card-label">Approved</div><div class="stat-card-val green" id="wd-stat-approved">0</div></div>
@@ -462,8 +462,8 @@
           <span id="wd-count" style="font-size:12px;color:var(--muted);">0 requests</span>
         </div>
         <table>
-          <thead><tr><th>Date</th><th>Username</th><th>Phone</th><th>Network</th><th>Amount</th><th>Reason</th><th>Status</th><th>Actions</th></tr></thead>
-          <tbody id="wd-table-body"><tr class="empty-row"><td colspan="8">No withdrawal requests yet</td></tr></tbody>
+          <thead><tr><th>Date</th><th>Username</th><th>Phone</th><th>Network</th><th>Requested</th><th>Fee (10%)</th><th>Send Amount</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="wd-table-body"><tr class="empty-row"><td colspan="9">No withdrawal requests yet</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -938,17 +938,19 @@ function startPendingWithdrawalsListener(){
       if(vals.length>0){
         wrap.style.display='block';
         if(countEl) countEl.textContent=vals.length+' pending';
-        if(tbody) tbody.innerHTML=vals.sort((a,b)=>b[0].localeCompare(a[0])).map(([k,v])=>`
-          <tr>
+        if(tbody) tbody.innerHTML=vals.sort((a,b)=>b[0].localeCompare(a[0])).map(([k,v])=>{
+            const fee=v.fee||Math.round((v.amount||0)*0.10);
+            const sendAmt=v.sendAmount||(v.amount-fee);
+            return `<tr>
             <td class="mono" style="font-size:11px;">${v.date||'—'}</td>
             <td><strong>${v.username||'—'}</strong></td>
             <td class="mono">${v.phone||'—'}</td>
-            <td class="mono" style="color:var(--gold);">${fmt(v.amount)}</td>
+            <td class="mono" style="color:var(--gold);">${fmt(v.amount)} → Send: <strong>${fmt(sendAmt)}</strong></td>
             <td style="display:flex;gap:6px;">
-              <button class="btn btn-approve" onclick="approveWithdrawal('${k}','${v.username}','${v.phone}',${v.amount},${v.sendAmount},'${v.reference}','${v.txKey}')">✅ Approve</button>
+              <button class="btn btn-approve" onclick="approveWithdrawal('${k}','${v.username}',${v.amount},${sendAmt},'${v.txKey}')">✅ Approve</button>
               <button class="btn btn-reject" onclick="rejectWithdrawal('${k}','${v.username}',${v.amount},'${v.txKey}')">❌ Reject</button>
             </td>
-          </tr>`).join('');
+          </tr>`;}).join('');
       } else { wrap.style.display='none'; }
     }
   });
@@ -992,14 +994,15 @@ function renderWithdrawalsTable(){
   if(wdFilter!=='all') entries=entries.filter(([k,v])=>v.status===wdFilter);
   entries.sort((a,b)=>b[0].localeCompare(a[0]));
   if(countEl) countEl.textContent=entries.length+' requests';
-  if(!entries.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="8">No requests found</td></tr>'; return; }
+  if(!entries.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="9">No requests found</td></tr>'; return; }
   tbody.innerHTML=entries.map(([k,v])=>{
     const sc=v.status==='approved'?'var(--accent3)':v.status==='rejected'?'var(--warn)':'var(--gold)';
     const si=v.status==='approved'?'✅ Approved':v.status==='rejected'?'❌ Rejected':'⏳ Pending';
     const net=(v.network||'').toLowerCase()==='mtn'?'🟡 MTN':'🔴 Airtel';
-    const rc=(v.reason||'').includes('Insufficient')?'var(--warn)':(v.reason||'').includes('Large')?'var(--gold)':'var(--muted)';
+    const fee=v.fee||Math.round((v.amount||0)*0.10);
+    const sendAmt=v.sendAmount||(v.amount-fee);
     const actions=v.status==='pending'
-      ?`<button class="btn btn-approve" onclick="approveWithdrawal('${k}','${v.username}','${v.phone}',${v.amount},${v.sendAmount},'${v.reference}','${v.txKey}')">✅ Approve</button>
+      ?`<button class="btn btn-approve" onclick="approveWithdrawal('${k}','${v.username}',${v.amount},${sendAmt},'${v.txKey}')">✅ Approve</button>
          <button class="btn btn-reject" onclick="rejectWithdrawal('${k}','${v.username}',${v.amount},'${v.txKey}')">❌ Reject</button>`
       :`<span style="font-size:11px;color:var(--muted);">—</span>`;
     return `<tr>
@@ -1007,36 +1010,28 @@ function renderWithdrawalsTable(){
       <td><strong>${v.username||'—'}</strong></td>
       <td class="mono">${v.phone||'—'}</td>
       <td style="font-size:12px;font-weight:700;">${net}</td>
-      <td class="mono" style="color:var(--warn);font-weight:800;">${fmt(v.amount)}</td>
-      <td style="font-size:11px;color:${rc};">${v.reason||'Manual Approval'}</td>
+      <td class="mono" style="color:var(--text);">${fmt(v.amount)}</td>
+      <td class="mono" style="color:var(--warn);">-${fmt(fee)}</td>
+      <td class="mono" style="color:var(--gold);font-weight:800;">${fmt(sendAmt)}</td>
       <td><span style="font-size:11px;font-weight:700;color:${sc};">${si}</span></td>
       <td style="display:flex;gap:6px;flex-wrap:wrap;">${actions}</td>
     </tr>`;
   }).join('');
 }
 
-// ── APPROVE — retry exact MarzPay call ──
-async function approveWithdrawal(reqKey, username, phone, amount, sendAmount, reference, txKey){
-  if(!confirm(`Approve withdrawal of ${fmt(amount)} for ${username}?\nSystem will send ${fmt(sendAmount)} via MarzPay.`)) return;
+// ── APPROVE — admin has sent funds manually, mark as successful ──
+async function approveWithdrawal(reqKey, username, amount, sendAmount, txKey){
+  if(!confirm(`Confirm you have MANUALLY SENT ${fmt(sendAmount)} to ${username}?\n\nClicking OK will mark this withdrawal as Successful in the user's history.`)) return;
   try{
-    toast('⏳ Sending via MarzPay...','#38bdf8');
-    const result = await marzSendAdmin(phone, sendAmount, reference);
-    if(result && result.status==='success'){
-      const u = await db.ref('users/'+safeKey(username)).get();
-      const userData = u.val()||{};
-      await db.ref().update({
-        ['users/'+safeKey(username)+'/withdrawn']: (userData.withdrawn||0)+amount,
-        ['users/'+safeKey(username)+'/transactions/'+txKey+'/status']: 'approved',
-        ['users/'+safeKey(username)+'/transactions/'+txKey+'/note']: 'Withdrawal Successful ✅',
-        ['pendingWithdrawals/'+reqKey+'/status']: 'approved'
-      });
-      toast('✅ Approved — funds sent to '+username);
-    } else {
-      const errMsg = result?.message||'Unknown error';
-      const isLowBal = errMsg.toLowerCase().includes('insufficient')||errMsg.toLowerCase().includes('balance')||errMsg.toLowerCase().includes('float');
-      await db.ref('pendingWithdrawals/'+reqKey+'/reason').set('Insufficient Balance on MarzPay');
-      toast('❌ '+(isLowBal?'MarzPay insufficient balance — top up and try again':errMsg),'#f87171');
-    }
+    const u = await db.ref('users/'+safeKey(username)).get();
+    const userData = u.val()||{};
+    await db.ref().update({
+      ['users/'+safeKey(username)+'/withdrawn']: (userData.withdrawn||0)+amount,
+      ['users/'+safeKey(username)+'/transactions/'+txKey+'/status']: 'approved',
+      ['users/'+safeKey(username)+'/transactions/'+txKey+'/note']: 'Withdrawal Successful ✅',
+      ['pendingWithdrawals/'+reqKey+'/status']: 'approved'
+    });
+    toast('✅ Approved — '+username+' will see Withdrawal Successful');
   } catch(e){ toast('❌ Error: '+e.message,'#f87171'); }
 }
 
