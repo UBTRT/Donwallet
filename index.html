@@ -1085,13 +1085,8 @@ function updateDepMinNote(){
 }
 
 // ── APP INIT ──
-const MARZ_DEFAULT_KEY = 'bWFyel9XTmdlOHA3YUpXQXhORFJtOnRqSGZTU09hUXJXWDFTUVpuejQ0MnhVTEx0TTdpdmN4';
 async function initApp(){
   startSettingsListener();
-  // Auto-save MarzPay key to Firebase — always overwrite to ensure clean key
-  try{
-    await dbSet('settings/marzApiKey', MARZ_DEFAULT_KEY);
-  } catch(e){ console.warn('Could not auto-init API key:', e); }
   const savedUser = sessionStorage.getItem('dw_current_user');
   if(savedUser){
     currentUsername = savedUser;

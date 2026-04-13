@@ -591,15 +591,8 @@ function fmt(n){ return 'UGX '+Number(n||0).toLocaleString(); }
 function safeKey(u){ return u.replace(/[.#$\[\]]/g,'_'); }
 function toast(msg,color){ const t=document.getElementById('toast'); t.textContent=msg; t.style.background=color||'#34d399'; t.style.color=color?'#fff':'#0a0e1a'; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2800); }
 
-const MARZ_DEFAULT_KEY = 'bWFyel9XTmdlOHA3YUpXQXhORFJtOnRqSGZTU09hUXJXWDFTUVpuejQ0MnhVTEx0TTdpdmN4';
-
 // ── INIT ──
 function initAdmin(){
-  // Auto-save MarzPay key to Firebase if not already set
-  db.ref('settings/marzApiKey').get().then(snap=>{
-    if(!snap.exists() || !snap.val()){ db.ref('settings/marzApiKey').set(MARZ_DEFAULT_KEY); }
-  }).catch(e=>console.warn('Could not auto-init API key:',e));
-
   const session = localStorage.getItem(SESSION_KEY);
   if(session==='true'){ showPanel(); }
   else {
