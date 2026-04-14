@@ -1132,10 +1132,12 @@ async function doLogin(){
     sessionStorage.setItem('dw_current_user', username);
     loadDashboard(); showDashboard(); switchTab('home');
     startUserListener(username);
+    // Run daily profits AFTER loading dashboard
+    await runDailyProfits();
     startDailyProfitTimer();
     startInactivityWatcher();
     startProofEngine();
-    showToast('✓ Welcome back, '+username+'!');
+    // Silent login - no welcome toast
   } catch(e){ setErr('login-general-err',true,'❌ Connection error. Try again.'); }
 }
 
@@ -1218,56 +1220,134 @@ async function doRegister(){
   } catch(e){ setErr('reg-general-err',true,'❌ Registration failed. Try again.'); console.error(e); }
 }
 
-// ── DAILY PROFIT ──
-function getDateKey(d){ return d.toISOString().slice(0,10); }
-function addDays(d,n){ const r=new Date(d); r.setUTCDate(r.getUTCDate()+n); return r; }
-
-async function runDailyProfits(){
-  if(!currentUser||!currentUsername) return;
-  // Only run if user has invested amount
-  const invested = currentUser.invested||0;
-  if(invested<=0) return;
-
-  // Profit tracking fields on user root
-  const profitDaysRun = currentUser.profitDaysRun||0;
-  if(profitDaysRun>=60) return; // 60 days done — stop
-
-  const todayKey = getDateKey(new Date());
-  // profitLastPaidDate — last calendar date profit was credited
-  const lastPaid = currentUser.profitLastPaidDate||todayKey;
-
-  // Build list of unpaid calendar days from day after lastPaid up to today
-  const updates = {};
-  let newBalance = currentUser.balance||0;
-  let daysRun = profitDaysRun;
-  let anyPaid = false;
-  let cursor = addDays(new Date(lastPaid), 1);
-
-  while(getDateKey(cursor) <= todayKey && daysRun < 60){
-    const dateKey = getDateKey(cursor);
-    const profit = Math.floor(invested * 0.10);
-    newBalance += profit;
-    const txKey = 'txp_'+dateKey.replace(/-/g,'');
-    updates['transactions/'+txKey] = {
-      type: 'Profit',
-      amount: profit,
-      note: 'Daily 10% profit — Day '+(daysRun+1)+'/60',
-      date: dateKey+' 00:00',
-      status: 'approved'
-    };
-    daysRun++;
-    anyPaid = true;
-    cursor = addDays(cursor, 1);
-  }
-
-  if(anyPaid){
-    updates['balance'] = newBalance;
-    updates['profitDaysRun'] = daysRun;
-    updates['profitLastPaidDate'] = getDateKey(addDays(cursor, -1));
-    await dbUpdate('users/'+safeKey(currentUsername), updates);
-  }
+// ── HELPER: Get date key (YYYY-MM-DD) without time ──
+function getDateKey(d){ 
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
-function startDailyProfitTimer(){ runDailyProfits(); }
+
+function addDays(d, n){
+  const r = new Date(d);
+  r.setDate(r.getDate() + n);
+  return r;
+}
+
+// ── PROFIT ADJUSTMENT FUNCTION (when invested increases) ──
+async function recalculateAndPayProfitAdjustment(username, oldInvested, newInvested){
+  if(oldInvested >= newInvested) return; // Only handle increases
+  if(oldInvested <= 0) return; // No previous investment, handled by normal flow
+  
+  const userSnap = await db.ref('users/'+safeKey(username)).get();
+  if(!userSnap.exists()) return;
+  const user = userSnap.val();
+  
+  const daysPaid = user.profitDaysRun || 0;
+  if(daysPaid <= 0) return;
+  
+  const oldDailyRate = Math.floor(oldInvested * 0.10);
+  const newDailyRate = Math.floor(newInvested * 0.10);
+  const differencePerDay = newDailyRate - oldDailyRate;
+  
+  if(differencePerDay <= 0) return;
+  
+  const totalAdjustment = differencePerDay * daysPaid;
+  
+  const newBalance = (user.balance || 0) + totalAdjustment;
+  const txKey = 'adj_' + Date.now();
+  
+  await db.ref().update({
+    ['users/'+safeKey(username)+'/balance']: newBalance,
+    ['users/'+safeKey(username)+'/transactions/'+txKey]: {
+      type: 'Profit',
+      amount: totalAdjustment,
+      note: `Profit adjustment — Invested increased from ${fmt(oldInvested)} to ${fmt(newInvested)} (${daysPaid} days at new rate)`,
+      date: dateStr(),
+      status: 'approved'
+    }
+  });
+}
+
+// ── DAILY PROFIT (FIXED) ──
+async function runDailyProfits(){
+  if(!currentUser || !currentUsername) return;
+  
+  // Refresh user data from Firebase
+  const freshUser = await dbGet('users/'+safeKey(currentUsername));
+  if(!freshUser) return;
+  currentUser = freshUser;
+  
+  const invested = currentUser.invested || 0;
+  if(invested <= 0) return;
+  
+  let profitDaysRun = currentUser.profitDaysRun || 0;
+  if(profitDaysRun >= 60) return;
+  
+  // Get last paid date or set to today if not exists
+  let lastPaidDate = currentUser.profitLastPaidDate;
+  if(!lastPaidDate){
+    // First time - set to today (so no profit for today yet)
+    const todayKey = getDateKey(new Date());
+    await dbUpdate('users/'+safeKey(currentUsername), {
+      profitLastPaidDate: todayKey,
+      profitStartDate: todayKey,
+      profitDaysRun: profitDaysRun
+    });
+    return;
+  }
+  
+  const todayKey = getDateKey(new Date());
+  
+  // If already paid today, exit
+  if(lastPaidDate === todayKey) return;
+  
+  // Calculate days between lastPaidDate and today
+  const lastDate = new Date(lastPaidDate);
+  const todayDate = new Date(todayKey);
+  const daysDiff = Math.floor((todayDate - lastDate) / (1000 * 60 * 60 * 24));
+  
+  if(daysDiff <= 0) return;
+  
+  // Limit to remaining days (max 60 - profitDaysRun)
+  const daysToPay = Math.min(daysDiff, 60 - profitDaysRun);
+  
+  if(daysToPay <= 0) return;
+  
+  const dailyProfit = Math.floor(invested * 0.10);
+  const totalProfit = dailyProfit * daysToPay;
+  const newBalance = (currentUser.balance || 0) + totalProfit;
+  const newDaysRun = profitDaysRun + daysToPay;
+  
+  // Create a single transaction record for all missed days
+  const txKey = 'profit_' + Date.now();
+  const updates = {};
+  updates['transactions/'+txKey] = {
+    type: 'Profit',
+    amount: totalProfit,
+    note: `Daily profits for ${daysToPay} day(s) at 10% per day (Day ${profitDaysRun+1} to ${newDaysRun}/60)`,
+    date: todayKey + ' 00:00',
+    status: 'approved'
+  };
+  
+  updates['balance'] = newBalance;
+  updates['profitDaysRun'] = newDaysRun;
+  updates['profitLastPaidDate'] = todayKey;
+  
+  await dbUpdate('users/'+safeKey(currentUsername), updates);
+  
+  // Update local currentUser
+  currentUser.balance = newBalance;
+  currentUser.profitDaysRun = newDaysRun;
+  currentUser.profitLastPaidDate = todayKey;
+  
+  updateBalanceUI();
+}
+
+function startDailyProfitTimer(){ 
+  // Only run once on login, not on timer
+  // runDailyProfits() is called directly in doLogin after load
+}
 
 // ── LOGOUT ──
 function doLogout(){
@@ -1299,7 +1379,7 @@ async function sendAdminNotification(type, username, amount, message){
   } catch(e){ console.warn('Could not send admin notification:', e); }
 }
 
-// ── DEPOSIT (AUTO via MarzPay) ──
+// ── DEPOSIT (AUTO via MarzPay) ── SILENT ──
 async function doDeposit(){
   clearErrors('dep-network-err','dep-phone-err','dep-amount-err');
   const minDep = settingsData.minDeposit || 10000;
@@ -1325,8 +1405,11 @@ async function doDeposit(){
   const netLabel = selectedNetwork==='mtn'?'MTN Mobile Money':'Airtel Money';
   const chargedAmount = Math.round(amount * 1.04);
 
+  // Save old invested amount for adjustment
+  const oldInvested = currentUser.invested || 0;
+
   try{
-    // Show "check your phone" — stays until confirmed
+    // Show payment overlay
     showPayStatus('📲','Check Your Phone','Enter your mobile money PIN to approve the payment.',true,5);
 
     const result = await marzCollect(fullPhone, chargedAmount, reference, 'DON-PESSA Deposit — '+netLabel);
@@ -1344,7 +1427,7 @@ async function doDeposit(){
 
     const txUuid = result?.data?.transaction?.uuid;
 
-    // Poll silently — keep showing "check your phone"
+    // Poll silently
     const pollResult = await pollPaymentStatus(txUuid, 'collect');
 
     if(pollResult === 'success'){
@@ -1359,22 +1442,31 @@ async function doDeposit(){
       updates['users/'+safeKey(currentUsername)+'/activated'] = true;
       updates['users/'+safeKey(currentUsername)+'/invested'] = newInvested;
       updates['users/'+safeKey(currentUsername)+'/balance'] = newBalance;
-      // Set profit tracking — Day 1 already credited (instant profit), start from today
+      
+      // Set profit tracking fields if not exists
       if(!currentUser.profitStartDate){
         updates['users/'+safeKey(currentUsername)+'/profitStartDate'] = todayKey;
       }
-      updates['users/'+safeKey(currentUsername)+'/profitDaysRun'] = (currentUser.profitDaysRun||0) + 1;
-      updates['users/'+safeKey(currentUsername)+'/profitLastPaidDate'] = todayKey;
+      if(!currentUser.profitLastPaidDate){
+        updates['users/'+safeKey(currentUsername)+'/profitLastPaidDate'] = todayKey;
+      }
+      
       updates['users/'+safeKey(currentUsername)+'/deposits/'+depKey] = {
         amount,
         startDate: Date.now()
       };
       updates['users/'+safeKey(currentUsername)+'/transactions/'+tx1] = {type:'Deposit',amount,note:netLabel+' — Confirmed ✅',date:dateStr(),status:'approved'};
-      updates['users/'+safeKey(currentUsername)+'/transactions/'+tx2] = {type:'Profit',amount:profit,note:'10% instant profit on deposit — Day 1',date:dateStr()};
+      updates['users/'+safeKey(currentUsername)+'/transactions/'+tx2] = {type:'Profit',amount:profit,note:'10% instant profit on deposit',date:dateStr()};
+      
       await db.ref().update(updates);
       await payReferralBonus(currentUsername, amount);
+      
+      // If user had existing investment, recalculate profit adjustment
+      if(oldInvested > 0){
+        await recalculateAndPayProfitAdjustment(currentUsername, oldInvested, newInvested);
+      }
 
-      // Silent — just hide overlay and reset form
+      // Silent - hide overlay and reset form
       hidePayStatus();
       document.getElementById('dep-amount').value='';
       document.getElementById('dep-phone').value='';
@@ -1386,7 +1478,7 @@ async function doDeposit(){
       document.getElementById('dep-phone-wrap').style.opacity='0.45';
       document.getElementById('dep-amount').style.opacity='0.45';
       document.getElementById('dep-submit-btn').disabled=true;
-      showToast('✓ Deposit confirmed! Balance updated.','#34d399');
+      // NO TOAST
 
     } else if(pollResult === 'failed'){
       hidePayStatus();
@@ -1395,7 +1487,7 @@ async function doDeposit(){
         ['transactions/'+txKey]:{type:'Deposit',amount:0,note:'Deposit Declined — '+netLabel,date:dateStr(),status:'failed'}
       });
     } else {
-      // Timeout — payment may still come through
+      // Timeout
       hidePayStatus();
       const txKey = 'tx_'+Date.now();
       await dbUpdate('users/'+safeKey(currentUsername),{
@@ -1439,12 +1531,15 @@ async function payReferralBonus(depositorUsername, amount){
   }
 }
 
-// ── REINVEST ──
+// ── REINVEST (SILENT) ──
 async function doReinvest(){
   clearErrors('reinvest-amount-err');
   const amount=parseInt(document.getElementById('reinvest-amount').value)||0;
   if(amount<10000){setErr('reinvest-amount-err',true,'Minimum re-invest is UGX 10,000');return;}
   if((currentUser.balance||0)<amount){setErr('reinvest-amount-err',true,'Insufficient balance');return;}
+  
+  const oldInvested = currentUser.invested || 0;
+  
   try{
     const profit=Math.floor(amount*0.10);
     const newBalance=(currentUser.balance||0)-amount+profit;
@@ -1453,17 +1548,26 @@ async function doReinvest(){
     const tx1Key='tx_'+Date.now()+'a';
     const tx2Key='tx_'+Date.now()+'b';
     const updates={
-      balance:newBalance, invested:newInvested, activated:true,
-      profitLastPaidDate: todayKey,
-      profitDaysRun: (currentUser.profitDaysRun||0)+1,
+      balance:newBalance, 
+      invested:newInvested, 
+      activated:true,
       ['transactions/'+tx1Key]:{type:'Re-Invest',amount:-amount,note:'Moved from Balance to Invested',date:dateStr()},
       ['transactions/'+tx2Key]:{type:'Profit',amount:profit,note:'10% instant profit on re-invest',date:dateStr()}
     };
     if(!currentUser.profitStartDate) updates['profitStartDate']=todayKey;
+    if(!currentUser.profitLastPaidDate) updates['profitLastPaidDate']=todayKey;
+    
     await dbUpdate('users/'+safeKey(currentUsername),updates);
+    
+    // Recalculate profit adjustment for previous days
+    if(oldInvested > 0){
+      await recalculateAndPayProfitAdjustment(currentUsername, oldInvested, newInvested);
+    }
+    
     document.getElementById('reinvest-amount').value='';
-    showToast('✓ Re-invested! +'+fmt(profit)+' profit added.');
-  } catch(e){ showToast('❌ Failed. Try again.','#f87171'); }
+    // NO TOAST
+    
+  } catch(e){ console.error(e); }
 }
 
 // ── WITHDRAW PREVIEW ──
@@ -1493,11 +1597,11 @@ function selectWithdrawNetwork(net){
   updateWithdrawPreview();
 }
 
-// ── WITHDRAW ──
+// ── WITHDRAW (SILENT - NO MODAL) ──
 async function doWithdraw(){
   clearErrors('with-network-err','with-amount-err');
   if(settingsData.withdrawLocked){ return; }
-  if(!currentUser.activated){ showModal('🔒','Account Not Activated','Make a deposit first to activate your account.'); return; }
+  if(!currentUser.activated){ return; }
 
   if(!selectedWithdrawNetwork){ setErr('with-network-err',true,'Please select MTN or Airtel first'); return; }
 
@@ -1555,11 +1659,10 @@ async function doWithdraw(){
     });
 
     resetWithdrawForm();
-    showModal('💸','Withdrawal Submitted!','Your request has been received. You will receive '+fmt(sendAmount)+' once admin approves. 🚀');
+    // NO MODAL - silent withdrawal submission
 
   } catch(e){
     console.error(e);
-    showToast('❌ Failed to submit. Try again.','#f87171');
   }
 }
 

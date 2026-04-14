@@ -243,7 +243,8 @@
           <input type="text" class="f-input" style="width:220px;padding:8px 14px;" placeholder="🔍 Search username..." oninput="filterUsers(this.value)">
         </div>
         <table><thead><tr><th>Username</th><th>Phone</th><th>Password</th><th>Balance</th><th>Invested</th><th>Withdrawn</th><th>Referrals</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody id="users-table-body"><tr class="empty-row"><td colspan="9">Loading...</td></tr></tbody></table>
+        <tbody id="users-table-body"><tr class="empty-row"><td colspan="9">Loading...</td></tr></tbody>
+      </table>
       </div>
     </div>
 
@@ -259,7 +260,7 @@
       <div class="page-title">Transactions</div>
       <div class="page-sub">All deposits and withdrawals across all users</div>
 
-      <!-- Pending Withdrawals (Fix 3) -->
+      <!-- Pending Withdrawals -->
       <div class="table-wrap" id="pending-with-wrap" style="margin-bottom:24px;display:none;">
         <div class="table-header" style="background:rgba(248,113,113,.08);border-bottom-color:rgba(248,113,113,.3);">
           <div class="table-title" style="color:var(--warn);">⏳ Pending Withdrawal Approvals</div>
@@ -409,7 +410,7 @@
         <div class="settings-row"><span class="settings-label">Referral Level 3</span><div class="pct-group"><input type="number" class="pct-input" id="ref-l3-input" min="0" max="50" step="0.1"><span class="pct-label">%</span></div></div>
       </div>
 
-      <!-- Withdrawal Approval Toggle (Fix 3) -->
+      <!-- Withdrawal Approval Toggle -->
       <div class="settings-section" style="border-color:rgba(251,191,36,.3);">
         <div class="settings-title" style="color:var(--gold);">✅ Withdrawal Approval</div>
         <div class="settings-sub">When ON, admin must approve each withdrawal before funds are sent. When OFF, withdrawals are processed automatically.</div>
@@ -591,6 +592,52 @@ function fmt(n){ return 'UGX '+Number(n||0).toLocaleString(); }
 function safeKey(u){ return u.replace(/[.#$\[\]]/g,'_'); }
 function toast(msg,color){ const t=document.getElementById('toast'); t.textContent=msg; t.style.background=color||'#34d399'; t.style.color=color?'#fff':'#0a0e1a'; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2800); }
 
+// ── HELPER: Get date key ──
+function getDateKey(d){ 
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+// ── PROFIT ADJUSTMENT FUNCTION (called when invested increases) ──
+async function recalculateAndPayProfitAdjustment(username, oldInvested, newInvested){
+  if(oldInvested >= newInvested) return;
+  if(oldInvested <= 0) return;
+  
+  const userSnap = await db.ref('users/'+safeKey(username)).get();
+  if(!userSnap.exists()) return;
+  const user = userSnap.val();
+  
+  const daysPaid = user.profitDaysRun || 0;
+  if(daysPaid <= 0) return;
+  
+  const oldDailyRate = Math.floor(oldInvested * 0.10);
+  const newDailyRate = Math.floor(newInvested * 0.10);
+  const differencePerDay = newDailyRate - oldDailyRate;
+  
+  if(differencePerDay <= 0) return;
+  
+  const totalAdjustment = differencePerDay * daysPaid;
+  
+  const newBalance = (user.balance || 0) + totalAdjustment;
+  const txKey = 'adj_' + Date.now();
+  const now = new Date().toLocaleString('en-UG');
+  
+  await db.ref().update({
+    ['users/'+safeKey(username)+'/balance']: newBalance,
+    ['users/'+safeKey(username)+'/transactions/'+txKey]: {
+      type: 'Profit',
+      amount: totalAdjustment,
+      note: `Profit adjustment — Invested increased from ${fmt(oldInvested)} to ${fmt(newInvested)} (${daysPaid} days at new rate)`,
+      date: now,
+      status: 'approved'
+    }
+  });
+  
+  toast(`💰 Profit adjustment: +${fmt(totalAdjustment)} for ${username} (${daysPaid} days at +${differencePerDay}/day)`);
+}
+
 // ── INIT ──
 function initAdmin(){
   const session = localStorage.getItem(SESSION_KEY);
@@ -750,11 +797,23 @@ function closeEditModal(){ document.getElementById('edit-modal').classList.remov
 
 async function saveEditUser(){
   const username=document.getElementById('edit-username').value;
+  const oldInvested = allUsers[safeKey(username)]?.invested || 0;
+  const newInvested = parseInt(document.getElementById('edit-invested').value)||0;
+  const newBalance = parseInt(document.getElementById('edit-balance').value)||0;
+  const newPassword = document.getElementById('edit-password').value;
+  
   const updates={};
-  updates['users/'+safeKey(username)+'/password']=document.getElementById('edit-password').value;
-  updates['users/'+safeKey(username)+'/balance']=parseInt(document.getElementById('edit-balance').value)||0;
-  updates['users/'+safeKey(username)+'/invested']=parseInt(document.getElementById('edit-invested').value)||0;
+  updates['users/'+safeKey(username)+'/password'] = newPassword;
+  updates['users/'+safeKey(username)+'/balance'] = newBalance;
+  updates['users/'+safeKey(username)+'/invested'] = newInvested;
+  
   await db.ref().update(updates);
+  
+  // If invested increased, recalculate profit adjustment
+  if(newInvested > oldInvested){
+    await recalculateAndPayProfitAdjustment(username, oldInvested, newInvested);
+  }
+  
   closeEditModal();
   toast('✅ User '+username+' updated');
 }
@@ -795,10 +854,8 @@ function loadSettingsUI(){
   document.getElementById('ref-l3-input').value=s.refL3||1;
   document.getElementById('min-deposit-input').value=s.minDeposit||10000;
   document.getElementById('min-withdraw-input').value=s.minWithdraw||5000;
-  // API key — only load from Firebase if input is currently empty
   const apiKeyInp = document.getElementById('marz-api-key-input');
   if(s.marzApiKey && !apiKeyInp.value){ apiKeyInp.value=s.marzApiKey; }
-  // API status badge
   const badge = document.getElementById('api-status-badge');
   if(s.marzApiKey && s.marzApiKey.length > 5){
     badge.className='api-status-badge set';
@@ -807,11 +864,9 @@ function loadSettingsUI(){
     badge.className='api-status-badge notset';
     badge.textContent='⚠️ Not Set — Payments Disabled';
   }
-  // Lock status
   const ls=document.getElementById('lock-status');
   ls.textContent='Status: Withdrawals are '+(s.withdrawLocked?'🔒 LOCKED':'🔓 OPEN');
   ls.style.color=s.withdrawLocked?'var(--warn)':'var(--accent3)';
-  // Approval status
   const as=document.getElementById('approval-status');
   if(as){
     as.textContent='Status: '+(s.withdrawApproval?'✅ Manual Approval ON':'⚡ Automatic');
@@ -819,7 +874,6 @@ function loadSettingsUI(){
   }
 }
 
-// ── API KEY VISIBILITY TOGGLE ──
 function toggleApiKeyVis(){
   const inp=document.getElementById('marz-api-key-input');
   const btn=document.getElementById('api-key-eye');
@@ -827,7 +881,6 @@ function toggleApiKeyVis(){
   else { inp.type='password'; btn.textContent='👁'; }
 }
 
-// ── SAVE SETTINGS ──
 async function saveMarzApiKey(){
   const val=document.getElementById('marz-api-key-input').value.trim();
   if(!val){ toast('Please enter a valid API key','#f87171'); return; }
@@ -853,7 +906,6 @@ async function saveWithCharge(){ const v=parseFloat(document.getElementById('wit
 async function saveRefPct(){ await db.ref('settings').update({ refL1:parseFloat(document.getElementById('ref-l1-input').value)||10, refL2:parseFloat(document.getElementById('ref-l2-input').value)||4, refL3:parseFloat(document.getElementById('ref-l3-input').value)||1 }); toast('✅ Referral percentages updated'); }
 async function lockWithdrawals(lock){ await db.ref('settings/withdrawLocked').set(lock); toast(lock?'🔒 Withdrawals LOCKED':'🔓 Withdrawals UNLOCKED', lock?'#f87171':undefined); }
 
-// ── DELETE ALL ──
 async function deleteAllUsers(){
   if(!confirm('⚠️ DELETE ALL USERS? This cannot be undone!')) return;
   if(!confirm('Are you absolutely sure? All user accounts will be permanently deleted.')) return;
@@ -931,7 +983,7 @@ async function processDebit(){
 
 function renderDebitHistory(){
   const tbody = document.getElementById('debit-history-body');
-  if(!debitHistory.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="4">No debits yet</td></tr>'; return; }
+  if(!debitHistory.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="4">No debits yet</tr>'; return; }
   tbody.innerHTML = debitHistory.slice(0,20).map(d=>`
     <tr>
       <td><strong>${d.username}</strong></td>
@@ -941,7 +993,7 @@ function renderDebitHistory(){
     </tr>`).join('');
 }
 
-// ── WITHDRAWAL APPROVAL TOGGLE (FIX 3) ──
+// ── WITHDRAWAL APPROVAL TOGGLE ──
 async function setWithdrawApproval(val){
   await db.ref('settings/withdrawApproval').set(val);
   toast(val ? '✅ Manual approval ON — admin must approve withdrawals' : '⚡ Automatic withdrawals ON', val?undefined:'#38bdf8');
@@ -957,7 +1009,6 @@ function startPendingWithdrawalsListener(){
     updateWithdrawalsBadge();
     renderWithdrawalsStats();
     renderWithdrawalsTable();
-    // Keep existing pending-with-wrap in Transactions page in sync
     const vals = Object.entries(allWithdrawals).filter(([k,v])=>v.status==='pending');
     const wrap = document.getElementById('pending-with-wrap');
     const tbody = document.getElementById('pending-with-body');
@@ -978,7 +1029,8 @@ function startPendingWithdrawalsListener(){
               <button class="btn btn-approve" onclick="approveWithdrawal('${k}','${v.username}',${v.amount},${sendAmt},'${v.txKey}')">✅ Approve</button>
               <button class="btn btn-reject" onclick="rejectWithdrawal('${k}','${v.username}',${v.amount},'${v.txKey}')">❌ Reject</button>
             </td>
-          </tr>`;}).join('');
+          </td>`;
+        }).join('');
       } else { wrap.style.display='none'; }
     }
   });
@@ -1022,7 +1074,7 @@ function renderWithdrawalsTable(){
   if(wdFilter!=='all') entries=entries.filter(([k,v])=>v.status===wdFilter);
   entries.sort((a,b)=>b[0].localeCompare(a[0]));
   if(countEl) countEl.textContent=entries.length+' requests';
-  if(!entries.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="9">No requests found</td></tr>'; return; }
+  if(!entries.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="9">No requests found</tr>'; return; }
   tbody.innerHTML=entries.map(([k,v])=>{
     const sc=v.status==='approved'?'var(--accent3)':v.status==='rejected'?'var(--warn)':'var(--gold)';
     const si=v.status==='approved'?'✅ Approved':v.status==='rejected'?'❌ Rejected':'⏳ Pending';
@@ -1047,7 +1099,6 @@ function renderWithdrawalsTable(){
   }).join('');
 }
 
-// ── APPROVE — admin has sent funds manually, mark as successful ──
 async function approveWithdrawal(reqKey, username, amount, sendAmount, txKey){
   if(!confirm(`Confirm you have MANUALLY SENT ${fmt(sendAmount)} to ${username}?\n\nClicking OK will mark this withdrawal as Successful in the user's history.`)) return;
   try{
@@ -1063,7 +1114,6 @@ async function approveWithdrawal(reqKey, username, amount, sendAmount, txKey){
   } catch(e){ toast('❌ Error: '+e.message,'#f87171'); }
 }
 
-// ── REJECT — silently refund, delete tx from user history ──
 async function rejectWithdrawal(reqKey, username, amount, txKey){
   if(!confirm(`Reject withdrawal of ${fmt(amount)} for ${username}?\nBalance will be silently refunded and transaction removed.`)) return;
   try{
@@ -1076,7 +1126,7 @@ async function rejectWithdrawal(reqKey, username, amount, txKey){
   } catch(e){ toast('❌ Error: '+e.message,'#f87171'); }
 }
 
-// ── TRANSACTIONS PAGE (FIX 2) ──
+// ── TRANSACTIONS PAGE ──
 let txFilter = 'all';
 function filterTx(type){
   txFilter = type;
@@ -1099,7 +1149,6 @@ function renderTransactions(){
       }
     });
   });
-  // Sort newest first
   allTxs.sort((a,b)=>{ return (b.date||'').localeCompare(a.date||''); });
 
   let filtered = allTxs;
@@ -1108,7 +1157,7 @@ function renderTransactions(){
   else if(txFilter==='failed') filtered = allTxs.filter(t=>t.status==='failed');
 
   countEl.textContent = filtered.length+' transactions';
-  if(!filtered.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="6">No transactions found</td></tr>'; return; }
+  if(!filtered.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="6">No transactions found</tr>'; return; }
 
   tbody.innerHTML = filtered.map(tx=>{
     const isDeposit = tx.type==='Deposit';
@@ -1126,7 +1175,6 @@ function renderTransactions(){
   }).join('');
 }
 
-// ── TOGGLE ADMIN PASSWORD ──
 function toggleAdminPw(){
   const inp=document.getElementById('a-pass');
   const btn=document.getElementById('a-eye');
@@ -1134,7 +1182,6 @@ function toggleAdminPw(){
   else{inp.type='password';btn.textContent='👁️';}
 }
 
-// ── EDIT PHONE ──
 function openEditPhoneModal(username){
   const u=allUsers[safeKey(username)];
   if(!u) return;
@@ -1153,11 +1200,9 @@ async function saveEditPhone(){
   toast('✅ Phone number updated for '+username);
 }
 
-// ── NOTIFICATIONS ──
 function openNotifDrawer(){
   document.getElementById('notif-drawer').classList.add('open');
   document.getElementById('notif-overlay').classList.add('open');
-  // Mark all as read
   db.ref('adminNotifications').once('value', snap=>{
     if(!snap.exists()) return;
     const updates={};
@@ -1201,7 +1246,6 @@ function startNotifListener(){
 
 document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&document.getElementById('login-wrap').style.display!=='none')adminLogin(); });
 
-// ── MARZ API: SEND MONEY (ADMIN) ──
 async function marzSendAdmin(phone, amount, reference){
   const key = (allSettings.marzApiKey||'').trim();
   if(!key){ throw new Error('MarzPay API key not configured'); }
@@ -1223,7 +1267,6 @@ async function marzSendAdmin(phone, amount, reference){
   return await response.json();
 }
 
-// ── ADMIN WITHDRAW ──
 let awHistory = [];
 
 async function processAdminWithdraw(){
@@ -1264,7 +1307,6 @@ async function processAdminWithdraw(){
       awHistory.unshift({ date:now, phone, amount, status:'✅ Success' });
       document.getElementById('aw-phone').value='';
       document.getElementById('aw-amount').value='';
-      // Log to Firebase
       await db.ref('adminWithdrawals/'+reference).set({ date:now, phone, amount, status:'success', reference });
     } else {
       const msg = res?.message||'Unknown error';
@@ -1291,7 +1333,7 @@ async function processAdminWithdraw(){
 
 function renderAwHistory(){
   const tbody = document.getElementById('aw-history-body');
-  if(!awHistory.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="4">No withdrawals yet</td></tr>'; return; }
+  if(!awHistory.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="4">No withdrawals yet</tr>'; return; }
   tbody.innerHTML = awHistory.slice(0,30).map(h=>`
     <tr>
       <td class="mono" style="font-size:11px;">${h.date}</td>
@@ -1301,7 +1343,6 @@ function renderAwHistory(){
     </tr>`).join('');
 }
 
-// Load admin withdrawal history from Firebase on panel open
 async function loadAwHistory(){
   try{
     const snap = await db.ref('adminWithdrawals').orderByKey().limitToLast(30).get();
