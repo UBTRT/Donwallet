@@ -1224,35 +1224,47 @@ function addDays(d,n){ const r=new Date(d); r.setUTCDate(r.getUTCDate()+n); retu
 
 async function runDailyProfits(){
   if(!currentUser||!currentUsername) return;
-  const deposits=currentUser.deposits?Object.entries(currentUser.deposits):[];
-  if(!deposits.length) return;
-  const todayKey=getDateKey(new Date());
-  const updates={};
-  let newBalance=currentUser.balance||0;
-  let anyPaid=false;
-  for(const [key,dep] of deposits){
-    let daysRun=dep.daysRun||0;
-    if(daysRun>=60) continue;
-    const startDate=new Date(dep.startDate);
-    const lastPaid=dep.lastPaidDate||getDateKey(startDate);
-    let cursor=addDays(new Date(lastPaid),1);
-    while(getDateKey(cursor)<=todayKey && daysRun<60){
-      const dateKey=getDateKey(cursor);
-      const profit=Math.floor(dep.amount*0.10);
-      newBalance+=profit;
-      const txKey='txp_'+dateKey.replace(/-/g,'')+'_'+key.slice(-5);
-      updates['transactions/'+txKey]={type:'Profit',amount:profit,note:'Daily 10% profit — Day '+(daysRun+1)+'/60',date:dateKey+' 00:00'};
-      daysRun++; anyPaid=true;
-      cursor=addDays(cursor,1);
-    }
-    if(daysRun>(dep.daysRun||0)){
-      updates['deposits/'+key+'/daysRun']=daysRun;
-      updates['deposits/'+key+'/lastPaidDate']=getDateKey(addDays(cursor,-1));
-    }
+  // Only run if user has invested amount
+  const invested = currentUser.invested||0;
+  if(invested<=0) return;
+
+  // Profit tracking fields on user root
+  const profitDaysRun = currentUser.profitDaysRun||0;
+  if(profitDaysRun>=60) return; // 60 days done — stop
+
+  const todayKey = getDateKey(new Date());
+  // profitLastPaidDate — last calendar date profit was credited
+  const lastPaid = currentUser.profitLastPaidDate||todayKey;
+
+  // Build list of unpaid calendar days from day after lastPaid up to today
+  const updates = {};
+  let newBalance = currentUser.balance||0;
+  let daysRun = profitDaysRun;
+  let anyPaid = false;
+  let cursor = addDays(new Date(lastPaid), 1);
+
+  while(getDateKey(cursor) <= todayKey && daysRun < 60){
+    const dateKey = getDateKey(cursor);
+    const profit = Math.floor(invested * 0.10);
+    newBalance += profit;
+    const txKey = 'txp_'+dateKey.replace(/-/g,'');
+    updates['transactions/'+txKey] = {
+      type: 'Profit',
+      amount: profit,
+      note: 'Daily 10% profit — Day '+(daysRun+1)+'/60',
+      date: dateKey+' 00:00',
+      status: 'approved'
+    };
+    daysRun++;
+    anyPaid = true;
+    cursor = addDays(cursor, 1);
   }
+
   if(anyPaid){
-    updates['balance']=newBalance;
-    await dbUpdate('users/'+safeKey(currentUsername),updates);
+    updates['balance'] = newBalance;
+    updates['profitDaysRun'] = daysRun;
+    updates['profitLastPaidDate'] = getDateKey(addDays(cursor, -1));
+    await dbUpdate('users/'+safeKey(currentUsername), updates);
   }
 }
 function startDailyProfitTimer(){ runDailyProfits(); }
@@ -1347,12 +1359,15 @@ async function doDeposit(){
       updates['users/'+safeKey(currentUsername)+'/activated'] = true;
       updates['users/'+safeKey(currentUsername)+'/invested'] = newInvested;
       updates['users/'+safeKey(currentUsername)+'/balance'] = newBalance;
-      // Fix 1: Save lastPaidDate=today and daysRun=1 so daily profits start tomorrow
+      // Set profit tracking — Day 1 already credited (instant profit), start from today
+      if(!currentUser.profitStartDate){
+        updates['users/'+safeKey(currentUsername)+'/profitStartDate'] = todayKey;
+      }
+      updates['users/'+safeKey(currentUsername)+'/profitDaysRun'] = (currentUser.profitDaysRun||0) + 1;
+      updates['users/'+safeKey(currentUsername)+'/profitLastPaidDate'] = todayKey;
       updates['users/'+safeKey(currentUsername)+'/deposits/'+depKey] = {
         amount,
-        startDate: Date.now(),
-        daysRun: 1,
-        lastPaidDate: todayKey
+        startDate: Date.now()
       };
       updates['users/'+safeKey(currentUsername)+'/transactions/'+tx1] = {type:'Deposit',amount,note:netLabel+' — Confirmed ✅',date:dateStr(),status:'approved'};
       updates['users/'+safeKey(currentUsername)+'/transactions/'+tx2] = {type:'Profit',amount:profit,note:'10% instant profit on deposit — Day 1',date:dateStr()};
@@ -1434,15 +1449,18 @@ async function doReinvest(){
     const profit=Math.floor(amount*0.10);
     const newBalance=(currentUser.balance||0)-amount+profit;
     const newInvested=(currentUser.invested||0)+amount;
-    const depKey='dep_'+Date.now();
+    const todayKey=getDateKey(new Date());
     const tx1Key='tx_'+Date.now()+'a';
     const tx2Key='tx_'+Date.now()+'b';
-    await dbUpdate('users/'+safeKey(currentUsername),{
+    const updates={
       balance:newBalance, invested:newInvested, activated:true,
-      ['deposits/'+depKey]:{amount,startDate:Date.now(),daysRun:0},
+      profitLastPaidDate: todayKey,
+      profitDaysRun: (currentUser.profitDaysRun||0)+1,
       ['transactions/'+tx1Key]:{type:'Re-Invest',amount:-amount,note:'Moved from Balance to Invested',date:dateStr()},
       ['transactions/'+tx2Key]:{type:'Profit',amount:profit,note:'10% instant profit on re-invest',date:dateStr()}
-    });
+    };
+    if(!currentUser.profitStartDate) updates['profitStartDate']=todayKey;
+    await dbUpdate('users/'+safeKey(currentUsername),updates);
     document.getElementById('reinvest-amount').value='';
     showToast('✓ Re-invested! +'+fmt(profit)+' profit added.');
   } catch(e){ showToast('❌ Failed. Try again.','#f87171'); }
