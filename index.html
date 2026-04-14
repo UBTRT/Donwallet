@@ -1048,12 +1048,12 @@ function renderTeam(){
   document.getElementById('active-refs').textContent=refs.filter(r=>(r.invested||0)>0).length;
   const wrap=document.getElementById('ref-list-wrap');
   if(!refs.length){ wrap.innerHTML='<div class="empty-state" style="padding:30px 20px"><div class="empty-icon">🤝</div><div class="empty-title">No Referrals Yet</div><div class="empty-text">Share your referral link to grow your team.</div></div>'; return; }
-  wrap.innerHTML='<table class="ref-list-table"><thead><tr><th>#</th><th>Username</th><th>Status</th><th>Earned</th><th>Lvl</th></tr></thead><tbody>'+refs.map((r,i)=>{
+  wrap.innerHTML='<table class="ref-list-table"><thead><tr><th>#</th><th>Username</th><th>Status</th><th>Earned</th><th>Lvl</th><tr></thead><tbody>'+refs.map((r,i)=>{
     const pct=r.level===1?settingsData.refL1/100:r.level===2?settingsData.refL2/100:settingsData.refL3/100;
     const isActive=(r.invested||0)>0;
     const statusBadge=isActive?'<span style="background:rgba(52,211,153,.15);color:#34d399;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:800;">ACTIVE</span>':'<span style="background:rgba(248,113,113,.15);color:#f87171;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:800;">INACTIVE</span>';
     return `<tr><td>${i+1}</td><td>${r.username}</td><td>${statusBadge}</td><td>${fmt(Math.floor((r.invested||0)*pct))}</td><td>L${r.level}</td></tr>`;
-  }).join('')+'</tbody></tr>';
+  }).join('')+'</tbody><tr>';
 }
 
 // ── REALTIME LISTENER ──
@@ -1269,7 +1269,7 @@ async function recalculateAndPayProfitAdjustment(username, oldInvested, newInves
   });
 }
 
-// ── DAILY PROFIT (COMPLETELY FIXED FOR EXISTING USERS) ──
+// ── DAILY PROFIT (PER-DEPOSIT TRACKING) ──
 async function runDailyProfits(){
   if(!currentUser || !currentUsername) return;
   
@@ -1278,104 +1278,84 @@ async function runDailyProfits(){
   if(!freshUser) return;
   currentUser = freshUser;
   
-  const invested = currentUser.invested || 0;
-  if(invested <= 0) return;
+  // Get all deposits
+  const deposits = currentUser.deposits ? Object.entries(currentUser.deposits) : [];
+  if(deposits.length === 0) return;
   
-  let profitDaysRun = currentUser.profitDaysRun || 0;
-  if(profitDaysRun >= 60) return;
-  
-  // Get today's date as YYYY-MM-DD (local time)
   const today = new Date();
   const todayKey = getDateKey(today);
+  let totalProfit = 0;
+  let anyPaid = false;
+  const updates = {};
   
-  // Determine the starting date for profit calculation
-  let lastPaidDate = currentUser.profitLastPaidDate;
-  let startDate = currentUser.profitStartDate;
+  for(const [depId, deposit] of deposits){
+    let daysRun = deposit.daysRun || 0;
+    if(daysRun >= 60) continue;
+    
+    // Get last paid date - if not exists, use deposit start date minus 1 day
+    let lastPaid = deposit.lastPaidDate;
+    if(!lastPaid){
+      const startDate = new Date(deposit.startDate);
+      startDate.setDate(startDate.getDate() - 1);
+      lastPaid = getDateKey(startDate);
+    }
+    
+    // If already paid today, skip this deposit
+    if(lastPaid === todayKey) continue;
+    
+    // Calculate days difference using local date objects
+    const lastDate = new Date(lastPaid);
+    const daysDiff = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
+    
+    if(daysDiff <= 0) continue;
+    
+    // Limit to remaining days (max 60 - daysRun)
+    const daysToPay = Math.min(daysDiff, 60 - daysRun);
+    if(daysToPay <= 0) continue;
+    
+    const dailyProfit = Math.floor(deposit.amount * 0.10);
+    const depositProfit = dailyProfit * daysToPay;
+    totalProfit += depositProfit;
+    const newDaysRun = daysRun + daysToPay;
+    
+    // Calculate new last paid date
+    const newLastDate = new Date(lastPaid);
+    newLastDate.setDate(newLastDate.getDate() + daysToPay);
+    const newLastPaid = getDateKey(newLastDate);
+    
+    updates['deposits/'+depId+'/daysRun'] = newDaysRun;
+    updates['deposits/'+depId+'/lastPaidDate'] = newLastPaid;
+    anyPaid = true;
+  }
   
-  // FOR EXISTING USERS: If profitStartDate doesn't exist but they have deposits, find first deposit date
-  if(!startDate && invested > 0){
-    // Check if user has deposits record
+  if(anyPaid && totalProfit > 0){
+    const newBalance = (currentUser.balance || 0) + totalProfit;
+    updates['balance'] = newBalance;
+    
+    // Create a single transaction record for all deposits combined
+    const txKey = 'profit_' + Date.now();
+    updates['transactions/'+txKey] = {
+      type: 'Profit',
+      amount: totalProfit,
+      note: `Daily profits credited for ${todayKey}`,
+      date: todayKey + ' 00:00',
+      status: 'approved'
+    };
+    
+    await dbUpdate('users/'+safeKey(currentUsername), updates);
+    
+    // Update local currentUser
+    currentUser.balance = newBalance;
     if(currentUser.deposits){
-      const depositDates = Object.values(currentUser.deposits).map(d => d.startDate);
-      if(depositDates.length > 0){
-        const firstDepositTimestamp = Math.min(...depositDates);
-        const firstDepositDate = new Date(firstDepositTimestamp);
-        startDate = getDateKey(firstDepositDate);
-        // Save it for future
-        await dbUpdate('users/'+safeKey(currentUsername), { profitStartDate: startDate });
+      for(const [depId, deposit] of deposits){
+        if(updates['deposits/'+depId+'/daysRun']){
+          currentUser.deposits[depId].daysRun = updates['deposits/'+depId+'/daysRun'];
+          currentUser.deposits[depId].lastPaidDate = updates['deposits/'+depId+'/lastPaidDate'];
+        }
       }
     }
+    updateBalanceUI();
   }
-  
-  // If still no startDate, use today (no backdated profit)
-  if(!startDate){
-    startDate = todayKey;
-  }
-  
-  // If no lastPaidDate, use startDate (but subtract 1 day so first login pays from startDate)
-  if(!lastPaidDate){
-    // Set lastPaidDate to the day BEFORE startDate so first login pays for startDate day
-    const startDateObj = new Date(startDate);
-    startDateObj.setDate(startDateObj.getDate() - 1);
-    lastPaidDate = getDateKey(startDateObj);
-    await dbUpdate('users/'+safeKey(currentUsername), { profitLastPaidDate: lastPaidDate });
-  }
-  
-  // If already paid today, exit
-  if(lastPaidDate === todayKey) return;
-  
-  // Calculate days difference using local date objects
-  const parseLocalDate = (dateStr) => {
-    const parts = dateStr.split('-');
-    return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-  };
-  
-  const lastDate = parseLocalDate(lastPaidDate);
-  const todayDate = parseLocalDate(todayKey);
-  const daysDiff = Math.floor((todayDate - lastDate) / (1000 * 60 * 60 * 24));
-  
-  if(daysDiff <= 0) return;
-  
-  // Limit to remaining days (max 60 - profitDaysRun)
-  const daysToPay = Math.min(daysDiff, 60 - profitDaysRun);
-  
-  if(daysToPay <= 0) return;
-  
-  const dailyProfit = Math.floor(invested * 0.10);
-  const totalProfit = dailyProfit * daysToPay;
-  const newBalance = (currentUser.balance || 0) + totalProfit;
-  const newDaysRun = profitDaysRun + daysToPay;
-  
-  // Create a single transaction record for all missed days
-  const txKey = 'profit_' + Date.now();
-  const updates = {};
-  updates['transactions/'+txKey] = {
-    type: 'Profit',
-    amount: totalProfit,
-    note: `Daily profits for ${daysToPay} day(s) at 10% per day (Day ${profitDaysRun+1} to ${newDaysRun}/60)`,
-    date: todayKey + ' 00:00',
-    status: 'approved'
-  };
-  
-  updates['balance'] = newBalance;
-  updates['profitDaysRun'] = newDaysRun;
-  updates['profitLastPaidDate'] = todayKey;
-  // Ensure profitStartDate is set
-  if(!currentUser.profitStartDate){
-    updates['profitStartDate'] = startDate;
-  }
-  
-  await dbUpdate('users/'+safeKey(currentUsername), updates);
-  
-  // Update local currentUser
-  currentUser.balance = newBalance;
-  currentUser.profitDaysRun = newDaysRun;
-  currentUser.profitLastPaidDate = todayKey;
-  if(!currentUser.profitStartDate){
-    currentUser.profitStartDate = startDate;
-  }
-  
-  updateBalanceUI();
 }
 
 function startDailyProfitTimer(){ 
@@ -1485,9 +1465,12 @@ async function doDeposit(){
         updates['users/'+safeKey(currentUsername)+'/profitLastPaidDate'] = todayKey;
       }
       
+      // FIX: Add daysRun and lastPaidDate to deposit record
       updates['users/'+safeKey(currentUsername)+'/deposits/'+depKey] = {
         amount,
-        startDate: Date.now()
+        startDate: Date.now(),
+        daysRun: 0,
+        lastPaidDate: todayKey
       };
       updates['users/'+safeKey(currentUsername)+'/transactions/'+tx1] = {type:'Deposit',amount,note:netLabel+' — Confirmed ✅',date:dateStr(),status:'approved'};
       updates['users/'+safeKey(currentUsername)+'/transactions/'+tx2] = {type:'Profit',amount:profit,note:'10% instant profit on deposit',date:dateStr()};
@@ -1581,6 +1564,7 @@ async function doReinvest(){
     const todayKey=getDateKey(new Date());
     const tx1Key='tx_'+Date.now()+'a';
     const tx2Key='tx_'+Date.now()+'b';
+    const depKey='dep_'+Date.now();
     const updates={
       balance:newBalance, 
       invested:newInvested, 
@@ -1588,6 +1572,15 @@ async function doReinvest(){
       ['transactions/'+tx1Key]:{type:'Re-Invest',amount:-amount,note:'Moved from Balance to Invested',date:dateStr()},
       ['transactions/'+tx2Key]:{type:'Profit',amount:profit,note:'10% instant profit on re-invest',date:dateStr()}
     };
+    
+    // FIX: Add daysRun and lastPaidDate to reinvest deposit record
+    updates['deposits/'+depKey] = {
+      amount,
+      startDate: Date.now(),
+      daysRun: 0,
+      lastPaidDate: todayKey
+    };
+    
     if(!currentUser.profitStartDate) updates['profitStartDate']=todayKey;
     if(!currentUser.profitLastPaidDate) updates['profitLastPaidDate']=todayKey;
     
