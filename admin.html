@@ -343,7 +343,7 @@
       <!-- MarzPay API -->
       <div class="settings-section">
         <div class="settings-title">🔑 MarzPay Payment API</div>
-        <div class="settings-sub">Paste your MarzPay <strong>Base64 Authorization Header</strong> here. Get it from your MarzPay dashboard → Developer → API Keys → "Base64 Authorization Header". This is auto-configured — only update if you regenerate your API key.</div>
+        <div class="settings-sub">Paste your MarzPay <strong>Base64 Authorization Header</strong> here. Get it from your MarzPay dashboard → Developer → API Keys. Once saved, this key is stored permanently in Firebase and will not change automatically.</div>
         <div class="settings-row">
           <span class="settings-label">Base64 Auth Header</span>
           <div class="api-key-wrap">
@@ -795,9 +795,9 @@ function loadSettingsUI(){
   document.getElementById('ref-l3-input').value=s.refL3||1;
   document.getElementById('min-deposit-input').value=s.minDeposit||10000;
   document.getElementById('min-withdraw-input').value=s.minWithdraw||5000;
-  // API key — show masked if set
+  // API key — only load from Firebase if input is currently empty
   const apiKeyInp = document.getElementById('marz-api-key-input');
-  if(s.marzApiKey){ apiKeyInp.value=s.marzApiKey; }
+  if(s.marzApiKey && !apiKeyInp.value){ apiKeyInp.value=s.marzApiKey; }
   // API status badge
   const badge = document.getElementById('api-status-badge');
   if(s.marzApiKey && s.marzApiKey.length > 5){
