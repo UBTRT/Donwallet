@@ -138,9 +138,6 @@
   .loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:16px;}
   .loading-spinner{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg)}}
-  .loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:16px;}
-  .loading-spinner{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
-  @keyframes spin{to{transform:rotate(360deg)}}
   /* NOTIFICATION BELL */
   .notif-bell{position:fixed;bottom:28px;right:28px;width:54px;height:54px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;box-shadow:0 4px 24px rgba(56,189,248,.4);z-index:300;transition:.2s;}
   .notif-bell:hover{transform:scale(1.08);}
@@ -329,9 +326,9 @@
       <!-- Debit History -->
       <div class="table-wrap" style="max-width:520px;margin-top:20px;">
         <div class="table-header"><div class="table-title">📋 Recent Debits</div></div>
-        <table>
+        <tr>
           <thead><tr><th>Username</th><th>Amount Debited</th><th>Balance After</th><th>Date & Time</th></tr></thead>
-          <tbody id="debit-history-body"><tr class="empty-row"><td colspan="4">No debits yet</td></tr></tbody>
+          <tbody id="debit-history-body"><tr class="empty-row"><td colspan="4">No debits yet</tr></tbody>
         </table>
       </div>
     </div>
@@ -465,7 +462,7 @@
         </div>
         <table>
           <thead><tr><th>Date</th><th>Username</th><th>Phone</th><th>Network</th><th>Requested</th><th>Fee (10%)</th><th>Send Amount</th><th>Status</th><th>Actions</th></tr></thead>
-          <tbody id="wd-table-body"><tr class="empty-row"><td colspan="9">No withdrawal requests yet</td></tr></tbody>
+          <tbody id="wd-table-body"><tr class="empty-row"><td colspan="9">No withdrawal requests yet</tr></tbody>
         </table>
       </div>
     </div>
@@ -496,9 +493,9 @@
       <!-- History -->
       <div class="table-wrap" style="max-width:520px;margin-top:20px;">
         <div class="table-header"><div class="table-title">📋 Admin Withdrawal History</div></div>
-        <table>
+        <tr>
           <thead><tr><th>Date</th><th>Phone</th><th>Amount</th><th>Status</th></tr></thead>
-          <tbody id="aw-history-body"><tr class="empty-row"><td colspan="4">No withdrawals yet</td></tr></tbody>
+          <tbody id="aw-history-body"><tr class="empty-row"><td colspan="4">No withdrawals yet</tr></tbody>
         </table>
       </div>
     </div>
@@ -591,14 +588,6 @@ let searchFilter = '';
 function fmt(n){ return 'UGX '+Number(n||0).toLocaleString(); }
 function safeKey(u){ return u.replace(/[.#$\[\]]/g,'_'); }
 function toast(msg,color){ const t=document.getElementById('toast'); t.textContent=msg; t.style.background=color||'#34d399'; t.style.color=color?'#fff':'#0a0e1a'; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2800); }
-
-// ── HELPER: Get date key ──
-function getDateKey(d){ 
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
 
 // ── PROFIT ADJUSTMENT FUNCTION (called when invested increases) ──
 async function recalculateAndPayProfitAdjustment(username, oldInvested, newInvested){
@@ -737,7 +726,7 @@ function renderUsersTable(){
   const users=Object.values(allUsers);
   const filtered=searchFilter?users.filter(u=>u.username&&u.username.toLowerCase().includes(searchFilter.toLowerCase())):users;
   const tbody=document.getElementById('users-table-body');
-  if(!filtered.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="9">No users found</td></tr>'; return; }
+  if(!filtered.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="9">No users found</tr>'; return; }
   tbody.innerHTML=filtered.map(u=>{
     const sk=safeKey(u.username||'');
     return `<tr>
@@ -983,7 +972,7 @@ async function processDebit(){
 
 function renderDebitHistory(){
   const tbody = document.getElementById('debit-history-body');
-  if(!debitHistory.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="4">No debits yet</tr>'; return; }
+  if(!debitHistory.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="4">No debits yet</td>'; return; }
   tbody.innerHTML = debitHistory.slice(0,20).map(d=>`
     <tr>
       <td><strong>${d.username}</strong></td>
@@ -1029,7 +1018,7 @@ function startPendingWithdrawalsListener(){
               <button class="btn btn-approve" onclick="approveWithdrawal('${k}','${v.username}',${v.amount},${sendAmt},'${v.txKey}')">✅ Approve</button>
               <button class="btn btn-reject" onclick="rejectWithdrawal('${k}','${v.username}',${v.amount},'${v.txKey}')">❌ Reject</button>
             </td>
-          </td>`;
+          </tr>`;
         }).join('');
       } else { wrap.style.display='none'; }
     }
@@ -1074,7 +1063,7 @@ function renderWithdrawalsTable(){
   if(wdFilter!=='all') entries=entries.filter(([k,v])=>v.status===wdFilter);
   entries.sort((a,b)=>b[0].localeCompare(a[0]));
   if(countEl) countEl.textContent=entries.length+' requests';
-  if(!entries.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="9">No requests found</tr>'; return; }
+  if(!entries.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="9">No requests found</td>'; return; }
   tbody.innerHTML=entries.map(([k,v])=>{
     const sc=v.status==='approved'?'var(--accent3)':v.status==='rejected'?'var(--warn)':'var(--gold)';
     const si=v.status==='approved'?'✅ Approved':v.status==='rejected'?'❌ Rejected':'⏳ Pending';
@@ -1157,7 +1146,7 @@ function renderTransactions(){
   else if(txFilter==='failed') filtered = allTxs.filter(t=>t.status==='failed');
 
   countEl.textContent = filtered.length+' transactions';
-  if(!filtered.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="6">No transactions found</tr>'; return; }
+  if(!filtered.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="6">No transactions found</td>'; return; }
 
   tbody.innerHTML = filtered.map(tx=>{
     const isDeposit = tx.type==='Deposit';
@@ -1333,7 +1322,7 @@ async function processAdminWithdraw(){
 
 function renderAwHistory(){
   const tbody = document.getElementById('aw-history-body');
-  if(!awHistory.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="4">No withdrawals yet</tr>'; return; }
+  if(!awHistory.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="4">No withdrawals yet</td>'; return; }
   tbody.innerHTML = awHistory.slice(0,30).map(h=>`
     <tr>
       <td class="mono" style="font-size:11px;">${h.date}</td>

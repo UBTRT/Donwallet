@@ -1053,7 +1053,7 @@ function renderTeam(){
     const isActive=(r.invested||0)>0;
     const statusBadge=isActive?'<span style="background:rgba(52,211,153,.15);color:#34d399;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:800;">ACTIVE</span>':'<span style="background:rgba(248,113,113,.15);color:#f87171;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:800;">INACTIVE</span>';
     return `<tr><td>${i+1}</td><td>${r.username}</td><td>${statusBadge}</td><td>${fmt(Math.floor((r.invested||0)*pct))}</td><td>L${r.level}</td></tr>`;
-  }).join('')+'</tbody></table>';
+  }).join('')+'</tbody></tr>';
 }
 
 // ── REALTIME LISTENER ──
@@ -1269,7 +1269,7 @@ async function recalculateAndPayProfitAdjustment(username, oldInvested, newInves
   });
 }
 
-// ── DAILY PROFIT (FIXED) ──
+// ── DAILY PROFIT (COMPLETELY FIXED FOR EXISTING USERS) ──
 async function runDailyProfits(){
   if(!currentUser || !currentUsername) return;
   
@@ -1284,27 +1284,54 @@ async function runDailyProfits(){
   let profitDaysRun = currentUser.profitDaysRun || 0;
   if(profitDaysRun >= 60) return;
   
-  // Get last paid date or set to today if not exists
+  // Get today's date as YYYY-MM-DD (local time)
+  const today = new Date();
+  const todayKey = getDateKey(today);
+  
+  // Determine the starting date for profit calculation
   let lastPaidDate = currentUser.profitLastPaidDate;
-  if(!lastPaidDate){
-    // First time - set to today (so no profit for today yet)
-    const todayKey = getDateKey(new Date());
-    await dbUpdate('users/'+safeKey(currentUsername), {
-      profitLastPaidDate: todayKey,
-      profitStartDate: todayKey,
-      profitDaysRun: profitDaysRun
-    });
-    return;
+  let startDate = currentUser.profitStartDate;
+  
+  // FOR EXISTING USERS: If profitStartDate doesn't exist but they have deposits, find first deposit date
+  if(!startDate && invested > 0){
+    // Check if user has deposits record
+    if(currentUser.deposits){
+      const depositDates = Object.values(currentUser.deposits).map(d => d.startDate);
+      if(depositDates.length > 0){
+        const firstDepositTimestamp = Math.min(...depositDates);
+        const firstDepositDate = new Date(firstDepositTimestamp);
+        startDate = getDateKey(firstDepositDate);
+        // Save it for future
+        await dbUpdate('users/'+safeKey(currentUsername), { profitStartDate: startDate });
+      }
+    }
   }
   
-  const todayKey = getDateKey(new Date());
+  // If still no startDate, use today (no backdated profit)
+  if(!startDate){
+    startDate = todayKey;
+  }
+  
+  // If no lastPaidDate, use startDate (but subtract 1 day so first login pays from startDate)
+  if(!lastPaidDate){
+    // Set lastPaidDate to the day BEFORE startDate so first login pays for startDate day
+    const startDateObj = new Date(startDate);
+    startDateObj.setDate(startDateObj.getDate() - 1);
+    lastPaidDate = getDateKey(startDateObj);
+    await dbUpdate('users/'+safeKey(currentUsername), { profitLastPaidDate: lastPaidDate });
+  }
   
   // If already paid today, exit
   if(lastPaidDate === todayKey) return;
   
-  // Calculate days between lastPaidDate and today
-  const lastDate = new Date(lastPaidDate);
-  const todayDate = new Date(todayKey);
+  // Calculate days difference using local date objects
+  const parseLocalDate = (dateStr) => {
+    const parts = dateStr.split('-');
+    return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  };
+  
+  const lastDate = parseLocalDate(lastPaidDate);
+  const todayDate = parseLocalDate(todayKey);
   const daysDiff = Math.floor((todayDate - lastDate) / (1000 * 60 * 60 * 24));
   
   if(daysDiff <= 0) return;
@@ -1333,6 +1360,10 @@ async function runDailyProfits(){
   updates['balance'] = newBalance;
   updates['profitDaysRun'] = newDaysRun;
   updates['profitLastPaidDate'] = todayKey;
+  // Ensure profitStartDate is set
+  if(!currentUser.profitStartDate){
+    updates['profitStartDate'] = startDate;
+  }
   
   await dbUpdate('users/'+safeKey(currentUsername), updates);
   
@@ -1340,6 +1371,9 @@ async function runDailyProfits(){
   currentUser.balance = newBalance;
   currentUser.profitDaysRun = newDaysRun;
   currentUser.profitLastPaidDate = todayKey;
+  if(!currentUser.profitStartDate){
+    currentUser.profitStartDate = startDate;
+  }
   
   updateBalanceUI();
 }
