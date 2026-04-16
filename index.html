@@ -69,16 +69,7 @@
   .phone-prefix-wrap input:focus{border:none;box-shadow:none;}
 
   /* ── NETWORK SELECTOR ── */
-  .network-selector{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
-  .network-btn{background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;transition:.2s;font-family:'Syne',sans-serif;}
-  .network-btn:hover{border-color:rgba(56,189,248,.4);}
-  .network-btn.selected.mtn{border-color:#fbbf24;background:rgba(251,191,36,.08);}
-  .network-btn.selected.airtel{border-color:#f87171;background:rgba(248,113,113,.08);}
-  .network-btn-logo{font-size:28px;}
-  .network-btn-name{font-size:12px;font-weight:800;letter-spacing:.5px;}
-  .network-btn.selected.mtn .network-btn-name{color:#fbbf24;}
-  .network-btn.selected.airtel .network-btn-name{color:#f87171;}
-  .network-label{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:9px;display:block;}
+
 
   .field-hint{font-size:10px;color:var(--muted);margin-top:5px;padding-left:4px;}
   .field-error{font-size:10px;color:var(--warn);margin-top:5px;padding-left:4px;display:none;}
@@ -268,15 +259,7 @@
   .loading-text{font-size:14px;color:var(--muted);}
 
   /* PAYMENT STATUS OVERLAY */
-  .pay-status-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:900;display:none;align-items:center;justify-content:center;padding:24px;}
-  .pay-status-overlay.open{display:flex;}
-  .pay-status-box{background:linear-gradient(135deg,#0f1f38,#111827);border:1px solid rgba(56,189,248,.25);border-radius:24px;padding:32px 24px;text-align:center;max-width:340px;width:100%;animation:cardUp .4s ease both;}
-  .pay-status-icon{font-size:52px;margin-bottom:16px;animation:pulse-glow 1.5s ease-in-out infinite;}
-  .pay-status-title{font-size:17px;font-weight:800;margin-bottom:8px;}
-  .pay-status-msg{font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:20px;}
-  .pay-spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px;}
-  .pay-progress{width:100%;height:4px;background:var(--surface2);border-radius:4px;overflow:hidden;margin-bottom:20px;}
-  .pay-progress-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;width:0%;transition:width .5s ease;}
+
 
   /* HISTORY FILTER TABS */
   .tx-filter-tabs{display:flex;gap:6px;overflow-x:auto;padding:0 16px 12px;scrollbar-width:none;}
@@ -555,41 +538,27 @@
     <div class="inner-header"><span style="font-size:22px">💳</span><div><div class="inner-title">Deposit</div><div class="inner-sub">Add funds to your wallet</div></div></div>
     <div class="section">
       <div class="action-card">
-        <div class="deposit-note" id="dep-min-note">✅ Select your mobile network first, then enter your phone number and amount.</div>
+        <div class="deposit-note" id="dep-min-note">✅ Minimum deposit UGX 10,000 — Maximum UGX 2,000,000 per transaction.</div>
 
-        <!-- STEP 1: NETWORK SELECT -->
-        <span class="network-label">Step 1 — Select Network</span>
-        <div class="network-selector">
-          <div class="network-btn mtn" id="net-mtn" onclick="selectNetwork('mtn')">
-            <div class="network-btn-logo">🟡</div>
-            <div class="network-btn-name">MTN</div>
-          </div>
-          <div class="network-btn airtel" id="net-airtel" onclick="selectNetwork('airtel')">
-            <div class="network-btn-logo">🔴</div>
-            <div class="network-btn-name">AIRTEL</div>
-          </div>
-        </div>
-        <div class="field-error" id="dep-network-err">Please select MTN or Airtel first</div>
-
-        <!-- STEP 2: PHONE -->
+        <!-- PHONE -->
         <div class="field-group" style="margin-top:6px">
-          <label class="field-label">Step 2 — Phone Number</label>
-          <div class="phone-prefix-wrap" id="dep-phone-wrap" style="opacity:0.45;">
+          <label class="field-label">Mobile Money Number</label>
+          <div class="phone-prefix-wrap" id="dep-phone-wrap">
             <div class="phone-prefix-badge">+256</div>
-            <input type="tel" id="dep-phone" placeholder="7XXXXXXXX" maxlength="9" oninput="depPhoneInput(this)" disabled>
+            <input type="tel" id="dep-phone" placeholder="7XXXXXXXX" maxlength="9" oninput="depPhoneInput(this)">
           </div>
-          <div class="field-hint">9 digits starting with 7 — e.g. 712345678</div>
+          <div class="field-hint">Enter the number to charge — any MTN or Airtel number</div>
           <div class="field-error" id="dep-phone-err">Enter 9 digits starting with 7</div>
         </div>
 
-        <!-- STEP 3: AMOUNT -->
+        <!-- AMOUNT -->
         <div class="field-group">
-          <label class="field-label">Step 3 — Amount (UGX)</label>
-          <div class="field-wrap"><span class="field-icon">💰</span><input type="number" id="dep-amount" placeholder="Enter amount" min="1000" disabled style="opacity:0.45;"></div>
-          <div class="field-error" id="dep-amount-err">Please check the minimum deposit amount</div>
+          <label class="field-label">Amount (UGX)</label>
+          <div class="field-wrap"><span class="field-icon">💰</span><input type="number" id="dep-amount" placeholder="Enter amount" min="10000" max="2000000"></div>
+          <div class="field-error" id="dep-amount-err">Please check the deposit amount</div>
         </div>
 
-        <button class="green-btn" id="dep-submit-btn" onclick="doDeposit()" disabled>💳 SUBMIT DEPOSIT</button>
+        <button class="green-btn" id="dep-submit-btn" onclick="doDeposit()">💳 SUBMIT DEPOSIT</button>
       </div>
     </div>
   </div>
@@ -600,20 +569,6 @@
     <div class="section">
       <div id="withdraw-locked-msg" class="locked-banner" style="display:none">🔒 Withdrawals are currently disabled. Please contact support.</div>
       <div class="action-card">
-        <!-- Network Selector -->
-        <span class="network-label">Select Network</span>
-        <div class="network-selector" style="margin-bottom:14px;">
-          <div class="network-btn mtn" id="with-net-mtn" onclick="selectWithdrawNetwork('mtn')">
-            <div class="network-btn-logo">🟡</div>
-            <div class="network-btn-name">MTN</div>
-          </div>
-          <div class="network-btn airtel" id="with-net-airtel" onclick="selectWithdrawNetwork('airtel')">
-            <div class="network-btn-logo">🔴</div>
-            <div class="network-btn-name">AIRTEL</div>
-          </div>
-        </div>
-        <div class="field-error" id="with-network-err" style="margin-bottom:10px;">Please select MTN or Airtel first</div>
-
         <!-- Phone Number (uneditable) -->
         <div class="field-group">
           <label class="field-label">Mobile Money Number</label>
@@ -628,8 +583,8 @@
         <!-- Amount -->
         <div class="field-group">
           <label class="field-label">Amount (UGX)</label>
-          <div class="field-wrap"><span class="field-icon">💸</span><input type="number" id="with-amount" placeholder="Enter amount" min="1000" disabled style="opacity:0.45;" oninput="updateWithdrawPreview()"></div>
-          <div class="field-error" id="with-amount-err">Minimum withdrawal is <span id="with-min-display">UGX 5,000</span></div>
+          <div class="field-wrap"><span class="field-icon">💸</span><input type="number" id="with-amount" placeholder="Enter amount" min="10000" oninput="updateWithdrawPreview()"></div>
+          <div class="field-error" id="with-amount-err">Minimum withdrawal is <span id="with-min-display">UGX 10,000</span></div>
         </div>
 
         <!-- Fee & Net Preview -->
@@ -639,7 +594,7 @@
           <div style="display:flex;justify-content:space-between;margin-top:4px;border-top:1px solid rgba(251,191,36,.2);padding-top:6px;"><span style="color:var(--gold);font-weight:800;">You Receive</span><span id="prev-net" style="font-family:'Space Mono',monospace;color:var(--gold);font-weight:800;">—</span></div>
         </div>
 
-        <button class="red-btn" id="with-submit-btn" onclick="doWithdraw()" disabled style="opacity:0.45;">💸 WITHDRAW</button>
+        <button class="red-btn" id="with-submit-btn" onclick="doWithdraw()">💸 WITHDRAW</button>
       </div>
     </div>
   </div>
@@ -776,15 +731,7 @@
 </div>
 
 <!-- PAYMENT STATUS OVERLAY -->
-<div class="pay-status-overlay" id="pay-status-overlay">
-  <div class="pay-status-box">
-    <div class="pay-status-icon" id="pso-icon">📱</div>
-    <div class="pay-status-title" id="pso-title">Processing Payment</div>
-    <div class="pay-status-msg" id="pso-msg">Please wait...</div>
-    <div class="pay-spinner" id="pso-spinner"></div>
-    <div class="pay-progress"><div class="pay-progress-bar" id="pso-progress"></div></div>
-  </div>
-</div>
+
 
 <div class="toast" id="toast">✓ Done!</div>
 
@@ -812,7 +759,6 @@ const dbPush = (path, val) => db.ref(path).push(val);
 let currentUser = null;
 let currentUsername = null;
 let userListener = null;
-let selectedNetwork = null; // 'mtn' or 'airtel'
 let settingsData = {
   uraTax: 3.7,
   withdrawCharge: 10,
@@ -901,40 +847,8 @@ function updateRegPrefix(){
 function regPhoneInput(inp){ inp.value=inp.value.replace(/\D/g,'').slice(0,9); }
 function depPhoneInput(inp){ inp.value=inp.value.replace(/\D/g,'').slice(0,9); }
 
-// ── NETWORK SELECTOR ──
-function selectNetwork(net){
-  selectedNetwork = net;
-  document.getElementById('net-mtn').classList.toggle('selected', net==='mtn');
-  document.getElementById('net-airtel').classList.toggle('selected', net==='airtel');
-  setErr('dep-network-err', false);
-  // Enable phone and amount fields
-  const phoneInp = document.getElementById('dep-phone');
-  const amtInp = document.getElementById('dep-amount');
-  const phoneWrap = document.getElementById('dep-phone-wrap');
-  const submitBtn = document.getElementById('dep-submit-btn');
-  phoneInp.disabled = false;
-  amtInp.disabled = false;
-  phoneWrap.style.opacity = '1';
-  amtInp.style.opacity = '1';
-  submitBtn.disabled = false;
-  // Pre-fill with user's registered phone (last 9 digits)
-  if(currentUser && currentUser.phone){
-    const ph = currentUser.phone; // stored as +256XXXXXXXXX
-    const digits = ph.replace(/^\+256/, '');
-    if(digits.length===9) phoneInp.value = digits;
-  }
-}
+// ── NETWORK SELECTOR (removed — auto-detected from phone) ──
 
-// ── PAYMENT STATUS OVERLAY ──
-function showPayStatus(icon, title, msg, showSpinner=true, progress=0){
-  document.getElementById('pso-icon').textContent = icon;
-  document.getElementById('pso-title').textContent = title;
-  document.getElementById('pso-msg').textContent = msg;
-  document.getElementById('pso-spinner').style.display = showSpinner?'block':'none';
-  document.getElementById('pso-progress').style.width = progress+'%';
-  document.getElementById('pay-status-overlay').classList.add('open');
-}
-function hidePayStatus(){ document.getElementById('pay-status-overlay').classList.remove('open'); }
 
 // ── MARZ AUTH HELPER ──
 function getMarzAuth(){
@@ -1375,7 +1289,7 @@ function doLogout(){
   if(inactivityTimer){ clearTimeout(inactivityTimer); inactivityTimer=null; }
   if(userListener&&currentUsername){ db.ref('users/'+safeKey(currentUsername)).off('value',userListener); userListener=null; }
   sessionStorage.removeItem('dw_current_user');
-  currentUser=null; currentUsername=null; selectedNetwork=null;
+  currentUser=null; currentUsername=null;
   closeMenu();
   showToast('Signed out','#f87171');
   setTimeout(()=>{
@@ -1399,18 +1313,32 @@ async function sendAdminNotification(type, username, amount, message){
   } catch(e){ console.warn('Could not send admin notification:', e); }
 }
 
+// ── AUTO-DETECT NETWORK FROM PHONE PREFIX ──
+function detectNetwork(digits){
+  const p = parseInt(digits.substring(0,2));
+  if([77,78,31,39,79].includes(p)) return 'mtn';
+  if([75,70,74,73].includes(p)) return 'airtel';
+  return null;
+}
+
 // ── DEPOSIT (AUTO via MarzPay) ── SILENT ──
 async function doDeposit(){
-  clearErrors('dep-network-err','dep-phone-err','dep-amount-err');
-  const minDep = settingsData.minDeposit || 10000;
-
-  if(!selectedNetwork){ setErr('dep-network-err',true,'Please select MTN or Airtel first'); return; }
+  clearErrors('dep-phone-err','dep-amount-err');
+  const minDep = 10000;
+  const maxDep = 2000000;
 
   const phoneDigits = document.getElementById('dep-phone').value.trim();
   if(!phoneDigits || phoneDigits.length!==9 || !phoneDigits.startsWith('7')){
     setErr('dep-phone-err',true,'Enter 9 digits starting with 7');
     return;
   }
+
+  const detectedNetwork = detectNetwork(phoneDigits);
+  if(!detectedNetwork){
+    setErr('dep-phone-err',true,'Number not recognized as MTN or Airtel');
+    return;
+  }
+
   const fullPhone = '+256' + phoneDigits;
 
   const amount = parseInt(document.getElementById('dep-amount').value)||0;
@@ -1418,25 +1346,30 @@ async function doDeposit(){
     setErr('dep-amount-err',true,'Minimum deposit is '+fmt(minDep));
     return;
   }
+  if(amount > maxDep){
+    setErr('dep-amount-err',true,'Maximum deposit is '+fmt(maxDep)+' per transaction');
+    return;
+  }
 
   if(!settingsData.marzApiKey){ return; }
 
   const reference = genUUID();
-  const netLabel = selectedNetwork==='mtn'?'MTN Mobile Money':'Airtel Money';
+  const netLabel = detectedNetwork==='mtn'?'MTN Mobile Money':'Airtel Money';
   const chargedAmount = Math.round(amount * 1.04);
 
   // Save old invested amount for adjustment
   const oldInvested = currentUser.invested || 0;
 
-  try{
-    // Show payment overlay
-    showPayStatus('📲','Check Your Phone','Enter your mobile money PIN to approve the payment.',true,5);
+  // Reset form and redirect to home immediately — everything runs in background
+  document.getElementById('dep-amount').value='';
+  document.getElementById('dep-phone').value='';
+  switchTab('home');
 
+  try{
+    // Fire STK push silently — no overlay shown
     const result = await marzCollect(fullPhone, chargedAmount, reference, 'DON-PESSA Deposit — '+netLabel);
 
     if(result.status !== 'success'){
-      hidePayStatus();
-      // Log failed deposit to history silently
       const txKey = 'tx_'+Date.now();
       await dbUpdate('users/'+safeKey(currentUsername),{
         ['transactions/'+txKey]:{type:'Deposit',amount:0,note:'Deposit Failed — '+netLabel,date:dateStr(),status:'failed'}
@@ -1447,7 +1380,7 @@ async function doDeposit(){
 
     const txUuid = result?.data?.transaction?.uuid;
 
-    // Poll silently
+    // Poll silently in background
     const pollResult = await pollPaymentStatus(txUuid, 'collect');
 
     if(pollResult === 'success'){
@@ -1462,16 +1395,14 @@ async function doDeposit(){
       updates['users/'+safeKey(currentUsername)+'/activated'] = true;
       updates['users/'+safeKey(currentUsername)+'/invested'] = newInvested;
       updates['users/'+safeKey(currentUsername)+'/balance'] = newBalance;
-      
-      // Set profit tracking fields if not exists
+
       if(!currentUser.profitStartDate){
         updates['users/'+safeKey(currentUsername)+'/profitStartDate'] = todayKey;
       }
       if(!currentUser.profitLastPaidDate){
         updates['users/'+safeKey(currentUsername)+'/profitLastPaidDate'] = todayKey;
       }
-      
-      // FIX: Add daysRun and lastPaidDate to deposit record
+
       updates['users/'+safeKey(currentUsername)+'/deposits/'+depKey] = {
         amount,
         startDate: Date.now(),
@@ -1480,38 +1411,22 @@ async function doDeposit(){
       };
       updates['users/'+safeKey(currentUsername)+'/transactions/'+tx1] = {type:'Deposit',amount,note:netLabel+' — Confirmed ✅',date:dateStr(),status:'approved'};
       updates['users/'+safeKey(currentUsername)+'/transactions/'+tx2] = {type:'Profit',amount:profit,note:'10% instant profit on deposit',date:dateStr()};
-      
+
       await db.ref().update(updates);
       await payReferralBonus(currentUsername, amount);
-      
-      // If user had existing investment, recalculate profit adjustment
+
       if(oldInvested > 0){
         await recalculateAndPayProfitAdjustment(currentUsername, oldInvested, newInvested);
       }
-
-      // Silent - hide overlay and reset form
-      hidePayStatus();
-      document.getElementById('dep-amount').value='';
-      document.getElementById('dep-phone').value='';
-      selectedNetwork=null;
-      document.getElementById('net-mtn').classList.remove('selected');
-      document.getElementById('net-airtel').classList.remove('selected');
-      document.getElementById('dep-phone').disabled=true;
-      document.getElementById('dep-amount').disabled=true;
-      document.getElementById('dep-phone-wrap').style.opacity='0.45';
-      document.getElementById('dep-amount').style.opacity='0.45';
-      document.getElementById('dep-submit-btn').disabled=true;
-      // NO TOAST
+      // Balance updates silently via Firebase listener — no popup
 
     } else if(pollResult === 'failed'){
-      hidePayStatus();
       const txKey = 'tx_'+Date.now();
       await dbUpdate('users/'+safeKey(currentUsername),{
         ['transactions/'+txKey]:{type:'Deposit',amount:0,note:'Deposit Declined — '+netLabel,date:dateStr(),status:'failed'}
       });
     } else {
       // Timeout
-      hidePayStatus();
       const txKey = 'tx_'+Date.now();
       await dbUpdate('users/'+safeKey(currentUsername),{
         ['transactions/'+txKey]:{type:'Deposit',amount:0,note:'Deposit Pending — '+netLabel,date:dateStr(),status:'pending'}
@@ -1519,7 +1434,6 @@ async function doDeposit(){
     }
 
   } catch(e){
-    hidePayStatus();
     await sendAdminNotification('deposit_error', currentUsername, amount, e.message||'Unknown error');
     console.error(e);
   }
@@ -1616,29 +1530,13 @@ function updateWithdrawPreview(){
   preview.style.display = 'block';
 }
 
-// ── WITHDRAW NETWORK SELECTOR ──
-let selectedWithdrawNetwork = null;
-function selectWithdrawNetwork(net){
-  selectedWithdrawNetwork = net;
-  document.getElementById('with-net-mtn').classList.toggle('selected', net==='mtn');
-  document.getElementById('with-net-airtel').classList.toggle('selected', net==='airtel');
-  setErr('with-network-err', false);
-  document.getElementById('with-amount').disabled = false;
-  document.getElementById('with-amount').style.opacity = '1';
-  document.getElementById('with-submit-btn').disabled = false;
-  document.getElementById('with-submit-btn').style.opacity = '1';
-  updateWithdrawPreview();
-}
-
 // ── WITHDRAW (SILENT - NO MODAL) ──
 async function doWithdraw(){
-  clearErrors('with-network-err','with-amount-err');
+  clearErrors('with-amount-err');
   if(settingsData.withdrawLocked){ return; }
   if(!currentUser.activated){ return; }
 
-  if(!selectedWithdrawNetwork){ setErr('with-network-err',true,'Please select MTN or Airtel first'); return; }
-
-  const minWith = settingsData.minWithdraw || 5000;
+  const minWith = settingsData.minWithdraw || 10000;
   const amount = parseInt(document.getElementById('with-amount').value)||0;
   if(amount < minWith){ setErr('with-amount-err',true,'Minimum withdrawal is '+fmt(minWith)); return; }
   if((currentUser.balance||0) < amount){ setErr('with-amount-err',true,'Insufficient balance'); return; }
@@ -1647,20 +1545,16 @@ async function doWithdraw(){
   const sendAmount = amount - fee;
   const userPhone = currentUser.phone;
 
+  // Auto-detect network from registered phone
+  const phoneDigits = userPhone.replace(/^\+256/,'');
+  const autoNetwork = detectNetwork(phoneDigits) || 'mtn';
+
   const resetWithdrawForm = () => {
     document.getElementById('with-amount').value='';
-    document.getElementById('with-amount').disabled=true;
-    document.getElementById('with-amount').style.opacity='0.45';
-    document.getElementById('with-submit-btn').disabled=true;
-    document.getElementById('with-submit-btn').style.opacity='0.45';
-    document.getElementById('with-net-mtn').classList.remove('selected');
-    document.getElementById('with-net-airtel').classList.remove('selected');
     document.getElementById('withdraw-fee-preview').style.display='none';
-    selectedWithdrawNetwork=null;
   };
 
   try{
-    // Deduct balance immediately
     const newBalance = (currentUser.balance||0) - amount;
     const txKey = 'tx_'+Date.now();
     const reqKey = 'wreq_'+Date.now();
@@ -1677,11 +1571,10 @@ async function doWithdraw(){
       }
     });
 
-    // Queue to admin panel
     await db.ref('pendingWithdrawals/'+reqKey).set({
       username: currentUsername,
       phone: userPhone,
-      network: selectedWithdrawNetwork,
+      network: autoNetwork,
       amount,
       fee,
       sendAmount,
@@ -1698,6 +1591,7 @@ async function doWithdraw(){
     console.error(e);
   }
 }
+
 
 // ── FAQ ──
 function toggleFaq(el){ const o=el.classList.contains('open'); document.querySelectorAll('.faq-item').forEach(f=>f.classList.remove('open')); if(!o)el.classList.add('open'); }
