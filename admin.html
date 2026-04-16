@@ -227,6 +227,7 @@
       <div class="stats-row" style="grid-template-columns:repeat(2,1fr)">
         <div class="stat-card"><div class="stat-card-label">Locked Users</div><div class="stat-card-val red" id="d-locked">—</div></div>
         <div class="stat-card"><div class="stat-card-label">Min Deposit</div><div class="stat-card-val gold" id="d-min-deposit">—</div></div>
+        <div class="stat-card"><div class="stat-card-label">Max Deposit</div><div class="stat-card-val gold" id="d-max-deposit">—</div></div>
       </div>
     </div>
 
@@ -377,6 +378,14 @@
             <input type="number" class="ugx-input" id="min-deposit-input" min="500" max="10000000" step="500" placeholder="10000">
           </div>
           <button class="btn btn-save" onclick="saveMinDeposit()">Save</button>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">Maximum Deposit (UGX)</span>
+          <div class="ugx-group">
+            <span class="ugx-label">UGX</span>
+            <input type="number" class="ugx-input" id="max-deposit-input" min="10000" max="100000000" step="1000" placeholder="2000000">
+          </div>
+          <button class="btn btn-save" onclick="saveMaxDeposit()">Save</button>
         </div>
         <div class="settings-row">
           <span class="settings-label">Minimum Withdrawal (UGX)</span>
@@ -708,6 +717,7 @@ function renderDashboard(){
   document.getElementById('d-total-earned').textContent=fmt(earned);
   document.getElementById('d-locked').textContent=locked;
   document.getElementById('d-min-deposit').textContent=fmt(allSettings.minDeposit||10000);
+  if(document.getElementById('d-max-deposit')) document.getElementById('d-max-deposit').textContent=fmt(allSettings.maxDeposit||2000000);
   const s=allSettings;
   document.getElementById('pct-summary').innerHTML=
     `<div class="pct-pill">Min Deposit <span>${fmt(s.minDeposit||10000)}</span></div>
@@ -842,6 +852,7 @@ function loadSettingsUI(){
   document.getElementById('ref-l2-input').value=s.refL2||4;
   document.getElementById('ref-l3-input').value=s.refL3||1;
   document.getElementById('min-deposit-input').value=s.minDeposit||10000;
+  if(document.getElementById('max-deposit-input')) document.getElementById('max-deposit-input').value=s.maxDeposit||2000000;
   document.getElementById('min-withdraw-input').value=s.minWithdraw||5000;
   const apiKeyInp = document.getElementById('marz-api-key-input');
   if(s.marzApiKey && !apiKeyInp.value){ apiKeyInp.value=s.marzApiKey; }
@@ -887,6 +898,13 @@ async function saveMinDeposit(){
   if(v<500){ toast('Minimum deposit must be at least UGX 500','#f87171'); return; }
   await db.ref('settings/minDeposit').set(v);
   toast('✅ Minimum deposit set to '+fmt(v));
+}
+async function saveMaxDeposit(){
+  const v=parseInt(document.getElementById('max-deposit-input').value)||2000000;
+  const minDep=parseInt(document.getElementById('min-deposit-input').value)||10000;
+  if(v<minDep){ toast('Maximum deposit must be greater than minimum','#f87171'); return; }
+  await db.ref('settings/maxDeposit').set(v);
+  toast('✅ Maximum deposit set to '+fmt(v));
 }
 async function saveWaGroup(){ await db.ref('settings/waGroup').set(document.getElementById('wa-group-input').value.trim()); toast('✅ WhatsApp Group link saved'); }
 async function saveWaSupport(){ await db.ref('settings/waSupport').set(document.getElementById('wa-support-input').value.trim()); toast('✅ WhatsApp Support link saved'); }

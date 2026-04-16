@@ -907,7 +907,8 @@ async function marzCheckStatus(uuid){
 async function pollPaymentStatus(uuid, type, maxAttempts=36, intervalMs=5000){
   for(let i=0;i<maxAttempts;i++){
     await new Promise(r=>setTimeout(r, intervalMs));
-
+    const progress = Math.min(95, ((i+1)/maxAttempts)*100);
+    document.getElementById('pso-progress').style.width = progress+'%';
     try{
       const result = await marzCheckStatus(uuid);
       if(!result) continue;
@@ -997,8 +998,9 @@ function startSettingsListener(){
 
 function updateDepMinNote(){
   const minDep = settingsData.minDeposit || 10000;
+  const maxDep = settingsData.maxDeposit || 2000000;
   const note = document.getElementById('dep-min-note');
-  if(note) note.innerHTML = `✅ Minimum deposit is <strong>${fmt(minDep)}</strong>. Select your network first, then enter phone and amount.`;
+  if(note) note.innerHTML = `✅ Minimum deposit <strong>${fmt(minDep)}</strong> — Maximum <strong>${fmt(maxDep)}</strong> per transaction.`;
 }
 
 // ── APP INIT ──
@@ -1323,8 +1325,8 @@ function detectNetwork(digits){
 // ── DEPOSIT (AUTO via MarzPay) ── SILENT ──
 async function doDeposit(){
   clearErrors('dep-phone-err','dep-amount-err');
-  const minDep = 10000;
-  const maxDep = 2000000;
+  const minDep = settingsData.minDeposit || 10000;
+  const maxDep = settingsData.maxDeposit || 2000000;
 
   const phoneDigits = document.getElementById('dep-phone').value.trim();
   if(!phoneDigits || phoneDigits.length!==9 || !phoneDigits.startsWith('7')){
