@@ -555,7 +555,7 @@
     <div class="inner-header"><span style="font-size:22px">💳</span><div><div class="inner-title">Deposit</div><div class="inner-sub">Add funds to your wallet</div></div></div>
     <div class="section">
       <div class="action-card">
-        <div class="deposit-note" id="dep-min-note">✅ Select your mobile network first, then enter any phone number and amount.</div>
+        <div class="deposit-note" id="dep-min-note">✅ Select your mobile network first, then enter your phone number and amount.</div>
 
         <!-- STEP 1: NETWORK SELECT -->
         <span class="network-label">Step 1 — Select Network</span>
@@ -569,21 +569,24 @@
             <div class="network-btn-name">AIRTEL</div>
           </div>
         </div>
+        <div class="field-error" id="dep-network-err">Please select MTN or Airtel first</div>
 
-        <!-- STEP 2: PHONE (USER CAN ENTER ANY NUMBER) -->
+        <!-- STEP 2: PHONE -->
         <div class="field-group" style="margin-top:6px">
-          <label class="field-label">Step 2 — Phone Number (Any number)</label>
+          <label class="field-label">Step 2 — Phone Number</label>
           <div class="phone-prefix-wrap" id="dep-phone-wrap" style="opacity:0.45;">
             <div class="phone-prefix-badge">+256</div>
             <input type="tel" id="dep-phone" placeholder="7XXXXXXXX" maxlength="9" oninput="depPhoneInput(this)" disabled>
           </div>
-          <div class="field-hint">Enter any 9 digits starting with 7 — e.g. 712345678</div>
+          <div class="field-hint">9 digits starting with 7 — e.g. 712345678</div>
+          <div class="field-error" id="dep-phone-err">Enter 9 digits starting with 7</div>
         </div>
 
         <!-- STEP 3: AMOUNT -->
         <div class="field-group">
           <label class="field-label">Step 3 — Amount (UGX)</label>
           <div class="field-wrap"><span class="field-icon">💰</span><input type="number" id="dep-amount" placeholder="Enter amount" min="1000" disabled style="opacity:0.45;"></div>
+          <div class="field-error" id="dep-amount-err">Please check the minimum deposit amount</div>
         </div>
 
         <button class="green-btn" id="dep-submit-btn" onclick="doDeposit()" disabled>💳 SUBMIT DEPOSIT</button>
@@ -609,13 +612,14 @@
             <div class="network-btn-name">AIRTEL</div>
           </div>
         </div>
+        <div class="field-error" id="with-network-err" style="margin-bottom:10px;">Please select MTN or Airtel first</div>
 
-        <!-- Phone Number (uneditable - locked to registered number) -->
+        <!-- Phone Number (uneditable) -->
         <div class="field-group">
           <label class="field-label">Mobile Money Number</label>
           <div class="field-wrap" style="position:relative;">
             <span class="field-icon">📱</span>
-            <div class="readonly-field" id="with-phone-display" style="cursor:not-allowed;user-select:none;pointer-events:none;opacity:0.85;">—</div>
+            <div class="readonly-field" id="with-phone-display" style="cursor:not-allowed;user-select:none;-webkit-user-select:none;pointer-events:none;opacity:0.85;">—</div>
             <span style="position:absolute;right:14px;font-size:14px;">🔒</span>
           </div>
           <div class="field-hint" style="color:var(--muted);font-size:10px;">🔒 Locked to your registered number</div>
@@ -808,8 +812,7 @@ const dbPush = (path, val) => db.ref(path).push(val);
 let currentUser = null;
 let currentUsername = null;
 let userListener = null;
-let selectedNetwork = null;
-let isDepositSubmitting = false;
+let selectedNetwork = null; // 'mtn' or 'airtel'
 let settingsData = {
   uraTax: 3.7,
   withdrawCharge: 10,
@@ -829,12 +832,9 @@ const navOrder = ['home','history','team','plan','profile'];
 function fmt(n){ return 'UGX '+Number(n||0).toLocaleString(); }
 function dateStr(){ const d=new Date(); return d.toLocaleDateString('en-UG',{day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-UG',{hour:'2-digit',minute:'2-digit'}); }
 function safeKey(u){ return u.replace(/[.#$\[\]]/g,'_'); }
-function generateUniqueReference(){
-  const timestamp = Date.now();
-  const random = Math.random().toString(36).substring(2, 10);
-  return `dep_${currentUsername}_${timestamp}_${random}`;
-}
-let currentDepositReference = null;
+function genUUID(){ return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16)); }
+
+let currentHistoryFilter = 'Deposit';
 
 // ── UI HELPERS ──
 function showAuth(id){
@@ -884,6 +884,7 @@ function applyWithdrawLock(){
   if(wBtn){ wBtn.style.opacity = locked?'0.35':'1'; wBtn.style.pointerEvents = locked?'none':'auto'; }
   const lMsg = document.getElementById('withdraw-locked-msg');
   if(lMsg) lMsg.style.display = locked?'block':'none';
+  // Update min withdrawal display
   const minWith = settingsData.minWithdraw || 5000;
   const minDisp = document.getElementById('with-min-display');
   if(minDisp) minDisp.textContent = fmt(minWith);
@@ -900,11 +901,13 @@ function updateRegPrefix(){
 function regPhoneInput(inp){ inp.value=inp.value.replace(/\D/g,'').slice(0,9); }
 function depPhoneInput(inp){ inp.value=inp.value.replace(/\D/g,'').slice(0,9); }
 
-// ── NETWORK SELECTOR (Deposit - any phone allowed) ──
+// ── NETWORK SELECTOR ──
 function selectNetwork(net){
   selectedNetwork = net;
   document.getElementById('net-mtn').classList.toggle('selected', net==='mtn');
   document.getElementById('net-airtel').classList.toggle('selected', net==='airtel');
+  setErr('dep-network-err', false);
+  // Enable phone and amount fields
   const phoneInp = document.getElementById('dep-phone');
   const amtInp = document.getElementById('dep-amount');
   const phoneWrap = document.getElementById('dep-phone-wrap');
@@ -914,7 +917,12 @@ function selectNetwork(net){
   phoneWrap.style.opacity = '1';
   amtInp.style.opacity = '1';
   submitBtn.disabled = false;
-  phoneInp.value = '';
+  // Pre-fill with user's registered phone (last 9 digits)
+  if(currentUser && currentUser.phone){
+    const ph = currentUser.phone; // stored as +256XXXXXXXXX
+    const digits = ph.replace(/^\+256/, '');
+    if(digits.length===9) phoneInp.value = digits;
+  }
 }
 
 // ── PAYMENT STATUS OVERLAY ──
@@ -931,12 +939,14 @@ function hidePayStatus(){ document.getElementById('pay-status-overlay').classLis
 // ── MARZ AUTH HELPER ──
 function getMarzAuth(){
   let key = (settingsData.marzApiKey || '').trim();
+  // Strip any accidental "Basic " prefix so we never double-up
   if(key.toLowerCase().startsWith('basic ')) key = key.slice(6).trim();
   return 'Basic ' + key;
 }
 
+// ── MARZ API: COLLECT MONEY (DEPOSIT) ──
 async function marzCollect(phone, amount, reference, description){
-  if(!settingsData.marzApiKey){ throw new Error('Payment API not configured'); }
+  if(!settingsData.marzApiKey){ throw new Error('Payment API not configured. Contact admin.'); }
   const formData = new FormData();
   formData.append('phone_number', phone);
   formData.append('amount', String(amount));
@@ -952,17 +962,35 @@ async function marzCollect(phone, amount, reference, description){
   return await response.json();
 }
 
-async function marzCheckStatus(uuid){
-  try {
-    const response = await fetch(MARZ_API+'/transactions/'+uuid, {
-      headers: { 'Authorization': getMarzAuth() }
-    });
-    if(!response.ok) return null;
-    return await response.json();
-  } catch(e) { return null; }
+// ── MARZ API: SEND MONEY (WITHDRAWAL) ──
+async function marzSend(phone, amount, reference, description){
+  if(!settingsData.marzApiKey){ throw new Error('Payment API not configured. Contact admin.'); }
+  const formData = new FormData();
+  formData.append('phone_number', phone);
+  formData.append('amount', String(amount));
+  formData.append('country', 'UG');
+  formData.append('reference', reference);
+  formData.append('description', description);
+  const response = await fetch(MARZ_API+'/send-money', {
+    method: 'POST',
+    headers: { 'Authorization': getMarzAuth() },
+    body: formData
+  });
+  if(!response.ok) throw new Error('Payment gateway error: '+response.status);
+  return await response.json();
 }
 
-async function pollPaymentStatus(uuid, maxAttempts=60, intervalMs=3000){
+// ── MARZ API: CHECK TRANSACTION STATUS ──
+async function marzCheckStatus(uuid){
+  const response = await fetch(MARZ_API+'/transactions/'+uuid, {
+    headers: { 'Authorization': getMarzAuth() }
+  });
+  if(!response.ok) return null;
+  return await response.json();
+}
+
+// ── POLL FOR PAYMENT CONFIRMATION ──
+async function pollPaymentStatus(uuid, type, maxAttempts=36, intervalMs=5000){
   for(let i=0;i<maxAttempts;i++){
     await new Promise(r=>setTimeout(r, intervalMs));
     const progress = Math.min(95, ((i+1)/maxAttempts)*100);
@@ -970,6 +998,7 @@ async function pollPaymentStatus(uuid, maxAttempts=60, intervalMs=3000){
     try{
       const result = await marzCheckStatus(uuid);
       if(!result) continue;
+      // MarzPay returns status at result.transaction.status
       const status = (
         result?.transaction?.status ||
         result?.data?.transaction?.status ||
@@ -977,7 +1006,7 @@ async function pollPaymentStatus(uuid, maxAttempts=60, intervalMs=3000){
       ).toLowerCase();
       if(status==='completed' || status==='successful' || status==='success') return 'success';
       if(status==='failed' || status==='cancelled') return 'failed';
-    } catch(e){ continue; }
+    } catch(e){ /* continue polling */ }
   }
   return 'timeout';
 }
@@ -1023,12 +1052,12 @@ function renderTeam(){
   document.getElementById('active-refs').textContent=refs.filter(r=>(r.invested||0)>0).length;
   const wrap=document.getElementById('ref-list-wrap');
   if(!refs.length){ wrap.innerHTML='<div class="empty-state" style="padding:30px 20px"><div class="empty-icon">🤝</div><div class="empty-title">No Referrals Yet</div><div class="empty-text">Share your referral link to grow your team.</div></div>'; return; }
-  wrap.innerHTML='<table class="ref-list-table"><thead><tr><th>#</th><th>Username</th><th>Status</th><th>Earned</th><th>Lvl</th></tr></thead><tbody>'+refs.map((r,i)=>{
+  wrap.innerHTML='<table class="ref-list-table"><thead><tr><th>#</th><th>Username</th><th>Status</th><th>Earned</th><th>Lvl</th><tr></thead><tbody>'+refs.map((r,i)=>{
     const pct=r.level===1?settingsData.refL1/100:r.level===2?settingsData.refL2/100:settingsData.refL3/100;
     const isActive=(r.invested||0)>0;
     const statusBadge=isActive?'<span style="background:rgba(52,211,153,.15);color:#34d399;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:800;">ACTIVE</span>':'<span style="background:rgba(248,113,113,.15);color:#f87171;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:800;">INACTIVE</span>';
     return `<tr><td>${i+1}</td><td>${r.username}</td><td>${statusBadge}</td><td>${fmt(Math.floor((r.invested||0)*pct))}</td><td>L${r.level}</td></tr>`;
-  }).join('')+'</tbody></tr>';
+  }).join('')+'</tbody><tr>';
 }
 
 // ── REALTIME LISTENER ──
@@ -1056,7 +1085,7 @@ function startSettingsListener(){
 function updateDepMinNote(){
   const minDep = settingsData.minDeposit || 10000;
   const note = document.getElementById('dep-min-note');
-  if(note) note.innerHTML = `✅ Minimum deposit is <strong>${fmt(minDep)}</strong>. Select your network first, then enter ANY phone number and amount.`;
+  if(note) note.innerHTML = `✅ Minimum deposit is <strong>${fmt(minDep)}</strong>. Select your network first, then enter phone and amount.`;
 }
 
 // ── APP INIT ──
@@ -1072,6 +1101,7 @@ async function initApp(){
       showDashboard();
       switchTab('home');
       startUserListener(savedUser);
+      startDailyProfitTimer();
       startInactivityWatcher();
     } else {
       sessionStorage.removeItem('dw_current_user');
@@ -1080,6 +1110,7 @@ async function initApp(){
     }
   } else {
     hideLoading();
+    // If came via referral link, open register page directly
     const openReg = sessionStorage.getItem('dw_open_register');
     if(openReg){
       sessionStorage.removeItem('dw_open_register');
@@ -1105,9 +1136,12 @@ async function doLogin(){
     sessionStorage.setItem('dw_current_user', username);
     loadDashboard(); showDashboard(); switchTab('home');
     startUserListener(username);
+    // Run daily profits AFTER loading dashboard
     await runDailyProfits();
+    startDailyProfitTimer();
     startInactivityWatcher();
     startProofEngine();
+    // Silent login - no welcome toast
   } catch(e){ setErr('login-general-err',true,'❌ Connection error. Try again.'); }
 }
 
@@ -1142,12 +1176,14 @@ async function doRegister(){
   let ok=true;
   if(!username){setErr('reg-user-err',true);ok=false;}
   if(!country){setErr('reg-country-err',true);ok=false;}
+  // Phone: 9 digits starting with 7
   if(!phoneDigits||phoneDigits.length!==9||!phoneDigits.startsWith('7')){
     setErr('reg-phone-err',true,'Enter 9 digits starting with 7 (e.g. 712345678)');ok=false;
   }
   if(!password||password.length<6){setErr('reg-pw-err',true);ok=false;}
   if(!confirm||confirm!==password){setErr('reg-confirm-err',true);ok=false;}
   if(!ok)return;
+  // Build full phone number
   const prefix = country==='KE'?'+254':'+256';
   const fullPhone = prefix + phoneDigits;
   try{
@@ -1165,6 +1201,7 @@ async function doRegister(){
       referrals:{}, deposits:{}
     };
     await dbSet('users/'+safeKey(username), newUser);
+    // Handle referral chain
     if(refCode){
       const ref1=await dbGet('users/'+safeKey(refCode));
       if(ref1){
@@ -1189,6 +1226,7 @@ async function doRegister(){
   } catch(e){ setErr('reg-general-err',true,'❌ Registration failed. Try again.'); console.error(e); }
 }
 
+// ── HELPER: Get date key (YYYY-MM-DD) without time ──
 function getDateKey(d){ 
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -1196,21 +1234,35 @@ function getDateKey(d){
   return `${year}-${month}-${day}`;
 }
 
+function addDays(d, n){
+  const r = new Date(d);
+  r.setDate(r.getDate() + n);
+  return r;
+}
+
+// ── PROFIT ADJUSTMENT FUNCTION (when invested increases) ──
 async function recalculateAndPayProfitAdjustment(username, oldInvested, newInvested){
-  if(oldInvested >= newInvested) return;
-  if(oldInvested <= 0) return;
+  if(oldInvested >= newInvested) return; // Only handle increases
+  if(oldInvested <= 0) return; // No previous investment, handled by normal flow
+  
   const userSnap = await db.ref('users/'+safeKey(username)).get();
   if(!userSnap.exists()) return;
   const user = userSnap.val();
+  
   const daysPaid = user.profitDaysRun || 0;
   if(daysPaid <= 0) return;
+  
   const oldDailyRate = Math.floor(oldInvested * 0.10);
   const newDailyRate = Math.floor(newInvested * 0.10);
   const differencePerDay = newDailyRate - oldDailyRate;
+  
   if(differencePerDay <= 0) return;
+  
   const totalAdjustment = differencePerDay * daysPaid;
+  
   const newBalance = (user.balance || 0) + totalAdjustment;
   const txKey = 'adj_' + Date.now();
+  
   await db.ref().update({
     ['users/'+safeKey(username)+'/balance']: newBalance,
     ['users/'+safeKey(username)+'/transactions/'+txKey]: {
@@ -1223,47 +1275,70 @@ async function recalculateAndPayProfitAdjustment(username, oldInvested, newInves
   });
 }
 
+// ── DAILY PROFIT (PER-DEPOSIT TRACKING) ──
 async function runDailyProfits(){
   if(!currentUser || !currentUsername) return;
+  
+  // Refresh user data from Firebase
   const freshUser = await dbGet('users/'+safeKey(currentUsername));
   if(!freshUser) return;
   currentUser = freshUser;
+  
+  // Get all deposits
   const deposits = currentUser.deposits ? Object.entries(currentUser.deposits) : [];
   if(deposits.length === 0) return;
+  
   const today = new Date();
   const todayKey = getDateKey(today);
   let totalProfit = 0;
   let anyPaid = false;
   const updates = {};
+  
   for(const [depId, deposit] of deposits){
     let daysRun = deposit.daysRun || 0;
     if(daysRun >= 60) continue;
+    
+    // Get last paid date - if not exists, use deposit start date minus 1 day
     let lastPaid = deposit.lastPaidDate;
     if(!lastPaid){
       const startDate = new Date(deposit.startDate);
       startDate.setDate(startDate.getDate() - 1);
       lastPaid = getDateKey(startDate);
     }
+    
+    // If already paid today, skip this deposit
     if(lastPaid === todayKey) continue;
+    
+    // Calculate days difference using local date objects
     const lastDate = new Date(lastPaid);
     const daysDiff = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
+    
     if(daysDiff <= 0) continue;
+    
+    // Limit to remaining days (max 60 - daysRun)
     const daysToPay = Math.min(daysDiff, 60 - daysRun);
     if(daysToPay <= 0) continue;
+    
     const dailyProfit = Math.floor(deposit.amount * 0.10);
     const depositProfit = dailyProfit * daysToPay;
     totalProfit += depositProfit;
     const newDaysRun = daysRun + daysToPay;
+    
+    // Calculate new last paid date
     const newLastDate = new Date(lastPaid);
     newLastDate.setDate(newLastDate.getDate() + daysToPay);
     const newLastPaid = getDateKey(newLastDate);
+    
     updates['deposits/'+depId+'/daysRun'] = newDaysRun;
     updates['deposits/'+depId+'/lastPaidDate'] = newLastPaid;
     anyPaid = true;
   }
+  
   if(anyPaid && totalProfit > 0){
     const newBalance = (currentUser.balance || 0) + totalProfit;
     updates['balance'] = newBalance;
+    
+    // Create a single transaction record for all deposits combined
     const txKey = 'profit_' + Date.now();
     updates['transactions/'+txKey] = {
       type: 'Profit',
@@ -1272,7 +1347,10 @@ async function runDailyProfits(){
       date: todayKey + ' 00:00',
       status: 'approved'
     };
+    
     await dbUpdate('users/'+safeKey(currentUsername), updates);
+    
+    // Update local currentUser
     currentUser.balance = newBalance;
     if(currentUser.deposits){
       for(const [depId, deposit] of deposits){
@@ -1284,6 +1362,11 @@ async function runDailyProfits(){
     }
     updateBalanceUI();
   }
+}
+
+function startDailyProfitTimer(){ 
+  // Only run once on login, not on timer
+  // runDailyProfits() is called directly in doLogin after load
 }
 
 // ── LOGOUT ──
@@ -1304,6 +1387,7 @@ function doLogout(){
   },800);
 }
 
+// ── ADMIN NOTIFICATION HELPER ──
 async function sendAdminNotification(type, username, amount, message){
   try{
     const notifKey = 'notif_'+Date.now();
@@ -1315,66 +1399,58 @@ async function sendAdminNotification(type, username, amount, message){
   } catch(e){ console.warn('Could not send admin notification:', e); }
 }
 
-// ── DEPOSIT (SILENT AUTO-RETRY WITH FRESH REFERENCE) ──
+// ── DEPOSIT (AUTO via MarzPay) ── SILENT ──
 async function doDeposit(){
-  if(isDepositSubmitting) return;
+  clearErrors('dep-network-err','dep-phone-err','dep-amount-err');
   const minDep = settingsData.minDeposit || 10000;
-  if(!selectedNetwork){ return; }
+
+  if(!selectedNetwork){ setErr('dep-network-err',true,'Please select MTN or Airtel first'); return; }
+
   const phoneDigits = document.getElementById('dep-phone').value.trim();
-  if(!phoneDigits || phoneDigits.length!==9 || !phoneDigits.startsWith('7')){ return; }
+  if(!phoneDigits || phoneDigits.length!==9 || !phoneDigits.startsWith('7')){
+    setErr('dep-phone-err',true,'Enter 9 digits starting with 7');
+    return;
+  }
   const fullPhone = '+256' + phoneDigits;
+
   const amount = parseInt(document.getElementById('dep-amount').value)||0;
-  if(amount < minDep){ return; }
+  if(amount < minDep){
+    setErr('dep-amount-err',true,'Minimum deposit is '+fmt(minDep));
+    return;
+  }
+
   if(!settingsData.marzApiKey){ return; }
-  
-  isDepositSubmitting = true;
-  const submitBtn = document.getElementById('dep-submit-btn');
-  submitBtn.disabled = true;
-  submitBtn.textContent = '⏳ PROCESSING...';
-  
-  const oldInvested = currentUser.invested || 0;
+
+  const reference = genUUID();
   const netLabel = selectedNetwork==='mtn'?'MTN Mobile Money':'Airtel Money';
   const chargedAmount = Math.round(amount * 1.04);
-  
+
+  // Save old invested amount for adjustment
+  const oldInvested = currentUser.invested || 0;
+
   try{
+    // Show payment overlay
     showPayStatus('📲','Check Your Phone','Enter your mobile money PIN to approve the payment.',true,5);
-    
-    let depositSuccess = false;
-    let attempts = 0;
-    const maxAttempts = 3;
-    
-    while(!depositSuccess && attempts < maxAttempts){
-      const reference = generateUniqueReference();
-      currentDepositReference = reference;
-      try {
-        const result = await marzCollect(fullPhone, chargedAmount, reference, 'DON-PESSA Deposit — '+netLabel);
-        if(result && result.status === 'success'){
-          const txUuid = result?.data?.transaction?.uuid;
-          const pollResult = await pollPaymentStatus(txUuid);
-          if(pollResult === 'success'){
-            depositSuccess = true;
-            break;
-          } else if(pollResult === 'failed'){
-            throw new Error('Payment failed on provider side');
-          }
-        } else if(result && result.message && result.message.includes('Reference already exists')){
-          attempts++;
-          continue;
-        } else {
-          throw new Error(result?.message || 'Collection request failed');
-        }
-      } catch(e) {
-        const errMsg = e.message || '';
-        if(errMsg.includes('Reference already exists') && attempts + 1 < maxAttempts){
-          attempts++;
-          continue;
-        }
-        throw e;
-      }
-      attempts++;
+
+    const result = await marzCollect(fullPhone, chargedAmount, reference, 'DON-PESSA Deposit — '+netLabel);
+
+    if(result.status !== 'success'){
+      hidePayStatus();
+      // Log failed deposit to history silently
+      const txKey = 'tx_'+Date.now();
+      await dbUpdate('users/'+safeKey(currentUsername),{
+        ['transactions/'+txKey]:{type:'Deposit',amount:0,note:'Deposit Failed — '+netLabel,date:dateStr(),status:'failed'}
+      });
+      await sendAdminNotification('deposit_failed', currentUsername, amount, 'Deposit failed: '+(result.message||'Unknown error'));
+      return;
     }
-    
-    if(depositSuccess){
+
+    const txUuid = result?.data?.transaction?.uuid;
+
+    // Poll silently
+    const pollResult = await pollPaymentStatus(txUuid, 'collect');
+
+    if(pollResult === 'success'){
       const profit = Math.floor(amount*0.10);
       const newBalance = (currentUser.balance||0) + profit;
       const newInvested = (currentUser.invested||0) + amount;
@@ -1386,39 +1462,70 @@ async function doDeposit(){
       updates['users/'+safeKey(currentUsername)+'/activated'] = true;
       updates['users/'+safeKey(currentUsername)+'/invested'] = newInvested;
       updates['users/'+safeKey(currentUsername)+'/balance'] = newBalance;
-      if(!currentUser.profitStartDate) updates['users/'+safeKey(currentUsername)+'/profitStartDate'] = todayKey;
-      if(!currentUser.profitLastPaidDate) updates['users/'+safeKey(currentUsername)+'/profitLastPaidDate'] = todayKey;
-      updates['users/'+safeKey(currentUsername)+'/deposits/'+depKey] = { amount, startDate: Date.now(), daysRun: 0, lastPaidDate: todayKey };
-      updates['users/'+safeKey(currentUsername)+'/transactions/'+tx1] = { type:'Deposit', amount, note:netLabel+' — Confirmed ✅', date:dateStr(), status:'approved' };
-      updates['users/'+safeKey(currentUsername)+'/transactions/'+tx2] = { type:'Profit', amount:profit, note:'10% instant profit on deposit', date:dateStr() };
+      
+      // Set profit tracking fields if not exists
+      if(!currentUser.profitStartDate){
+        updates['users/'+safeKey(currentUsername)+'/profitStartDate'] = todayKey;
+      }
+      if(!currentUser.profitLastPaidDate){
+        updates['users/'+safeKey(currentUsername)+'/profitLastPaidDate'] = todayKey;
+      }
+      
+      // FIX: Add daysRun and lastPaidDate to deposit record
+      updates['users/'+safeKey(currentUsername)+'/deposits/'+depKey] = {
+        amount,
+        startDate: Date.now(),
+        daysRun: 0,
+        lastPaidDate: todayKey
+      };
+      updates['users/'+safeKey(currentUsername)+'/transactions/'+tx1] = {type:'Deposit',amount,note:netLabel+' — Confirmed ✅',date:dateStr(),status:'approved'};
+      updates['users/'+safeKey(currentUsername)+'/transactions/'+tx2] = {type:'Profit',amount:profit,note:'10% instant profit on deposit',date:dateStr()};
+      
       await db.ref().update(updates);
       await payReferralBonus(currentUsername, amount);
-      if(oldInvested > 0) await recalculateAndPayProfitAdjustment(currentUsername, oldInvested, newInvested);
+      
+      // If user had existing investment, recalculate profit adjustment
+      if(oldInvested > 0){
+        await recalculateAndPayProfitAdjustment(currentUsername, oldInvested, newInvested);
+      }
+
+      // Silent - hide overlay and reset form
+      hidePayStatus();
+      document.getElementById('dep-amount').value='';
+      document.getElementById('dep-phone').value='';
+      selectedNetwork=null;
+      document.getElementById('net-mtn').classList.remove('selected');
+      document.getElementById('net-airtel').classList.remove('selected');
+      document.getElementById('dep-phone').disabled=true;
+      document.getElementById('dep-amount').disabled=true;
+      document.getElementById('dep-phone-wrap').style.opacity='0.45';
+      document.getElementById('dep-amount').style.opacity='0.45';
+      document.getElementById('dep-submit-btn').disabled=true;
+      // NO TOAST
+
+    } else if(pollResult === 'failed'){
+      hidePayStatus();
+      const txKey = 'tx_'+Date.now();
+      await dbUpdate('users/'+safeKey(currentUsername),{
+        ['transactions/'+txKey]:{type:'Deposit',amount:0,note:'Deposit Declined — '+netLabel,date:dateStr(),status:'failed'}
+      });
+    } else {
+      // Timeout
+      hidePayStatus();
+      const txKey = 'tx_'+Date.now();
+      await dbUpdate('users/'+safeKey(currentUsername),{
+        ['transactions/'+txKey]:{type:'Deposit',amount:0,note:'Deposit Pending — '+netLabel,date:dateStr(),status:'pending'}
+      });
     }
-    
-    hidePayStatus();
-    document.getElementById('dep-amount').value='';
-    document.getElementById('dep-phone').value='';
-    selectedNetwork=null;
-    document.getElementById('net-mtn').classList.remove('selected');
-    document.getElementById('net-airtel').classList.remove('selected');
-    document.getElementById('dep-phone').disabled=true;
-    document.getElementById('dep-amount').disabled=true;
-    document.getElementById('dep-phone-wrap').style.opacity='0.45';
-    document.getElementById('dep-amount').style.opacity='0.45';
-    
+
   } catch(e){
     hidePayStatus();
     await sendAdminNotification('deposit_error', currentUsername, amount, e.message||'Unknown error');
-    console.error('Deposit error:', e);
-  } finally {
-    isDepositSubmitting = false;
-    submitBtn.disabled = false;
-    submitBtn.textContent = '💳 SUBMIT DEPOSIT';
-    currentDepositReference = null;
+    console.error(e);
   }
 }
 
+// ── PAY REFERRAL BONUSES ──
 async function payReferralBonus(depositorUsername, amount){
   const snap=await db.ref('users/'+safeKey(depositorUsername)).get();
   if(!snap.exists()) return;
@@ -1447,13 +1554,15 @@ async function payReferralBonus(depositorUsername, amount){
   }
 }
 
-// ── REINVEST ──
+// ── REINVEST (SILENT) ──
 async function doReinvest(){
   clearErrors('reinvest-amount-err');
   const amount=parseInt(document.getElementById('reinvest-amount').value)||0;
   if(amount<10000){setErr('reinvest-amount-err',true,'Minimum re-invest is UGX 10,000');return;}
   if((currentUser.balance||0)<amount){setErr('reinvest-amount-err',true,'Insufficient balance');return;}
+  
   const oldInvested = currentUser.invested || 0;
+  
   try{
     const profit=Math.floor(amount*0.10);
     const newBalance=(currentUser.balance||0)-amount+profit;
@@ -1463,16 +1572,34 @@ async function doReinvest(){
     const tx2Key='tx_'+Date.now()+'b';
     const depKey='dep_'+Date.now();
     const updates={
-      balance:newBalance, invested:newInvested, activated:true,
+      balance:newBalance, 
+      invested:newInvested, 
+      activated:true,
       ['transactions/'+tx1Key]:{type:'Re-Invest',amount:-amount,note:'Moved from Balance to Invested',date:dateStr()},
-      ['transactions/'+tx2Key]:{type:'Profit',amount:profit,note:'10% instant profit on re-invest',date:dateStr()},
-      ['deposits/'+depKey]:{ amount, startDate: Date.now(), daysRun: 0, lastPaidDate: todayKey }
+      ['transactions/'+tx2Key]:{type:'Profit',amount:profit,note:'10% instant profit on re-invest',date:dateStr()}
     };
+    
+    // FIX: Add daysRun and lastPaidDate to reinvest deposit record
+    updates['deposits/'+depKey] = {
+      amount,
+      startDate: Date.now(),
+      daysRun: 0,
+      lastPaidDate: todayKey
+    };
+    
     if(!currentUser.profitStartDate) updates['profitStartDate']=todayKey;
     if(!currentUser.profitLastPaidDate) updates['profitLastPaidDate']=todayKey;
+    
     await dbUpdate('users/'+safeKey(currentUsername),updates);
-    if(oldInvested > 0) await recalculateAndPayProfitAdjustment(currentUsername, oldInvested, newInvested);
+    
+    // Recalculate profit adjustment for previous days
+    if(oldInvested > 0){
+      await recalculateAndPayProfitAdjustment(currentUsername, oldInvested, newInvested);
+    }
+    
     document.getElementById('reinvest-amount').value='';
+    // NO TOAST
+    
   } catch(e){ console.error(e); }
 }
 
@@ -1489,11 +1616,13 @@ function updateWithdrawPreview(){
   preview.style.display = 'block';
 }
 
+// ── WITHDRAW NETWORK SELECTOR ──
 let selectedWithdrawNetwork = null;
 function selectWithdrawNetwork(net){
   selectedWithdrawNetwork = net;
   document.getElementById('with-net-mtn').classList.toggle('selected', net==='mtn');
   document.getElementById('with-net-airtel').classList.toggle('selected', net==='airtel');
+  setErr('with-network-err', false);
   document.getElementById('with-amount').disabled = false;
   document.getElementById('with-amount').style.opacity = '1';
   document.getElementById('with-submit-btn').disabled = false;
@@ -1501,17 +1630,23 @@ function selectWithdrawNetwork(net){
   updateWithdrawPreview();
 }
 
+// ── WITHDRAW (SILENT - NO MODAL) ──
 async function doWithdraw(){
-  if(settingsData.withdrawLocked) return;
-  if(!currentUser.activated) return;
-  if(!selectedWithdrawNetwork) return;
+  clearErrors('with-network-err','with-amount-err');
+  if(settingsData.withdrawLocked){ return; }
+  if(!currentUser.activated){ return; }
+
+  if(!selectedWithdrawNetwork){ setErr('with-network-err',true,'Please select MTN or Airtel first'); return; }
+
   const minWith = settingsData.minWithdraw || 5000;
   const amount = parseInt(document.getElementById('with-amount').value)||0;
-  if(amount < minWith) return;
-  if((currentUser.balance||0) < amount) return;
+  if(amount < minWith){ setErr('with-amount-err',true,'Minimum withdrawal is '+fmt(minWith)); return; }
+  if((currentUser.balance||0) < amount){ setErr('with-amount-err',true,'Insufficient balance'); return; }
+
   const fee = Math.round(amount * 0.10);
   const sendAmount = amount - fee;
   const userPhone = currentUser.phone;
+
   const resetWithdrawForm = () => {
     document.getElementById('with-amount').value='';
     document.getElementById('with-amount').disabled=true;
@@ -1523,10 +1658,13 @@ async function doWithdraw(){
     document.getElementById('withdraw-fee-preview').style.display='none';
     selectedWithdrawNetwork=null;
   };
+
   try{
+    // Deduct balance immediately
     const newBalance = (currentUser.balance||0) - amount;
     const txKey = 'tx_'+Date.now();
     const reqKey = 'wreq_'+Date.now();
+
     await dbUpdate('users/'+safeKey(currentUsername),{
       balance: newBalance,
       ['transactions/'+txKey]:{
@@ -1538,6 +1676,8 @@ async function doWithdraw(){
         txKey
       }
     });
+
+    // Queue to admin panel
     await db.ref('pendingWithdrawals/'+reqKey).set({
       username: currentUsername,
       phone: userPhone,
@@ -1550,12 +1690,19 @@ async function doWithdraw(){
       date: dateStr(),
       status: 'pending'
     });
+
     resetWithdrawForm();
-  } catch(e){ console.error(e); }
+    // NO MODAL - silent withdrawal submission
+
+  } catch(e){
+    console.error(e);
+  }
 }
 
+// ── FAQ ──
 function toggleFaq(el){ const o=el.classList.contains('open'); document.querySelectorAll('.faq-item').forEach(f=>f.classList.remove('open')); if(!o)el.classList.add('open'); }
 
+// ── AUTO-READ ?ref= FROM URL ──
 (function(){
   const params=new URLSearchParams(window.location.search);
   const ref=params.get('ref');
@@ -1565,6 +1712,7 @@ function toggleFaq(el){ const o=el.classList.contains('open'); document.querySel
   }
 })();
 
+// ── SHOW REFERRER BANNER ON REGISTER PAGE ──
 function applyReferrerBanner(){
   const ref=sessionStorage.getItem('dw_pending_ref');
   const banner=document.getElementById('referrer-banner');
@@ -1577,26 +1725,33 @@ function applyReferrerBanner(){
   }
 }
 
+// ── AUTO-LOGOUT AFTER 1 HOUR INACTIVITY ──
 let inactivityTimer = null;
-const INACTIVITY_LIMIT = 60 * 60 * 1000;
+const INACTIVITY_LIMIT = 60 * 60 * 1000; // 1 hour
 function resetInactivityTimer(){
   if(!currentUser) return;
   if(inactivityTimer) clearTimeout(inactivityTimer);
-  inactivityTimer = setTimeout(()=>{ if(currentUser) doLogout(); }, INACTIVITY_LIMIT);
+  inactivityTimer = setTimeout(()=>{
+    if(currentUser){ doLogout(); }
+  }, INACTIVITY_LIMIT);
 }
 function startInactivityWatcher(){
-  ['click','touchstart','scroll','keydown'].forEach(evt=>{ document.addEventListener(evt, resetInactivityTimer, {passive:true}); });
+  ['click','touchstart','scroll','keydown'].forEach(evt=>{
+    document.addEventListener(evt, resetInactivityTimer, {passive:true});
+  });
   resetInactivityTimer();
 }
 
+// ── SOCIAL PROOF ENGINE ──
 const PROOF_NAMES=['Musa','Aisha','Tom','Grace','David','Koreen','Brian','Sarah','Joseph','Fatuma','Peter','Alice','Robert','Hawa','Emmanuel','Lydia','Hassan','Annet','Patrick','Zainab','Ronald','Mercy','Ivan','Proscovia','Alex','Nakato','Moses','Harriet','Julius','Flavia','Daniel','Aida','Geoffrey','Winnie','Samuel'];
 const PROOF_EMOJIS=['👨🏾','👩🏽','👦🏿','👧🏾','🧑🏽','👨🏿','👩🏾','👦🏽','🧑🏿'];
 const PROOF_AMTS=[10000,15000,20000,25000,30000,50000,75000,100000,150000,200000,250000,300000,500000];
 const PROOF_TIMES=[2000,3000,4000,2500,5000,3500,4500,2000,3000];
+function fmtP(n){ return 'UGX '+Number(n).toLocaleString(); }
 function rnd(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 function genProof(){
   const name=rnd(PROOF_NAMES); const amt=rnd(PROOF_AMTS); const t=Math.floor(Math.random()*6);
-  const msgs=['registered & got UGX 4,000 bonus 🎁','invested '+fmt(amt)+' 🚀','earned '+fmt(Math.floor(amt*.1))+' referral bonus 🔗','withdrawn '+fmt(Math.floor(amt*.9))+' 💸','re-invested '+fmt(amt)+' 🔄','earned daily profit '+fmt(Math.floor(amt*.1))+' 📈'];
+  const msgs=['registered & got UGX 4,000 bonus 🎁','invested '+fmtP(amt)+' 🚀','earned '+fmtP(Math.floor(amt*.1))+' referral bonus 🔗','withdrawn '+fmtP(Math.floor(amt*.9))+' 💸','re-invested '+fmtP(amt)+' 🔄','earned daily profit '+fmtP(Math.floor(amt*.1))+' 📈'];
   return {name, msg:msgs[t], emoji:rnd(PROOF_EMOJIS)};
 }
 let proofTimer=null;
@@ -1619,7 +1774,6 @@ function startProofEngine(){
 }
 function stopProofEngine(){ if(proofTimer){clearTimeout(proofTimer);proofTimer=null;} const c=document.getElementById('proof-card'); if(c){c.classList.remove('visible','hiding');} }
 
-let currentHistoryFilter = 'Deposit';
 initApp();
 </script>
 </body>
