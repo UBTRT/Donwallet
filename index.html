@@ -307,6 +307,13 @@
   .company-cta-sub{font-size:12px;color:var(--muted);line-height:1.6;}
   .nav-item.withdraw-locked{opacity:0.35;pointer-events:none;cursor:not-allowed;}
   .menu-item.withdraw-locked{opacity:0.35;pointer-events:none;cursor:not-allowed;}
+
+  /* ── REFERRER BANNER ── */
+  .referrer-banner{display:none;align-items:center;gap:10px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.25);border-radius:14px;padding:12px 16px;margin-bottom:16px;animation:fadeDown .4s ease both;}
+  .referrer-banner.show{display:flex;}
+  .referrer-banner-icon{font-size:22px;flex-shrink:0;}
+  .referrer-banner-text{font-size:12px;color:var(--muted);line-height:1.5;}
+  .referrer-banner-name{font-size:13px;font-weight:800;color:var(--accent);}
 </style>
 </head>
 <body>
@@ -352,6 +359,11 @@
   <div class="auth-card">
     <div class="auth-title">Register 🚀</div>
     <div class="auth-subtitle">Fill in your details to get started</div>
+    <!-- Referrer banner — shown only when ?ref= is in URL -->
+    <div class="referrer-banner" id="referrer-banner">
+      <div class="referrer-banner-icon">🔗</div>
+      <div class="referrer-banner-text">Referred by<br><span class="referrer-banner-name" id="referrer-banner-name"></span></div>
+    </div>
     <div class="field-group">
       <label class="field-label">Username</label>
       <div class="field-wrap"><span class="field-icon">👤</span><input type="text" id="reg-username" placeholder="Choose a username"></div>
@@ -376,10 +388,6 @@
       </div>
       <div class="field-hint">9 digits starting with 7 — e.g. 712345678</div>
       <div class="field-error" id="reg-phone-err">Enter 9 digits starting with 7</div>
-    </div>
-    <div class="field-group">
-      <label class="field-label">Referral Code (Optional)</label>
-      <div class="field-wrap"><span class="field-icon">🔗</span><input type="text" id="reg-ref" placeholder="Referral username (optional)"></div>
     </div>
     <div class="field-group">
       <label class="field-label">Password</label>
@@ -832,11 +840,7 @@ let currentHistoryFilter = 'Deposit';
 function showAuth(id){
   document.querySelectorAll('.auth-page').forEach(p=>{p.classList.remove('active');p.style.display='none';});
   const t=document.getElementById(id); t.style.display='flex'; t.classList.add('active');
-  if(id==='register-page'){
-    const pr=sessionStorage.getItem('dw_pending_ref');
-    const ri=document.getElementById('reg-ref');
-    if(pr&&ri&&!ri.value) ri.value=pr;
-  }
+  if(id==='register-page') applyReferrerBanner();
 }
 function showDashboard(){
   document.querySelectorAll('.auth-page').forEach(p=>{p.classList.remove('active');p.style.display='none';});
@@ -1166,7 +1170,7 @@ async function doRegister(){
   const username=document.getElementById('reg-username').value.trim();
   const country=document.getElementById('reg-country').value;
   const phoneDigits=document.getElementById('reg-phone').value.trim();
-  const refCode=document.getElementById('reg-ref').value.trim();
+  const refCode=sessionStorage.getItem('dw_pending_ref')||'';
   const password=document.getElementById('reg-password').value;
   const confirm=document.getElementById('reg-confirm').value;
   let ok=true;
@@ -1214,7 +1218,9 @@ async function doRegister(){
       }
     }
     showToast('✓ Account created! UGX 4,000 bonus added 🎁');
-    ['reg-username','reg-phone','reg-password','reg-confirm','reg-ref'].forEach(id=>document.getElementById(id).value='');
+    sessionStorage.removeItem('dw_pending_ref');
+    ['reg-username','reg-phone','reg-password','reg-confirm'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('referrer-banner').classList.remove('show');
     document.getElementById('reg-country').value=''; updateRegPrefix(); checkStrength('');
     setTimeout(()=>showAuth('login-page'),1200);
   } catch(e){ setErr('reg-general-err',true,'❌ Registration failed. Try again.'); console.error(e); }
@@ -1702,10 +1708,22 @@ function toggleFaq(el){ const o=el.classList.contains('open'); document.querySel
   const ref=params.get('ref');
   if(ref){
     sessionStorage.setItem('dw_pending_ref',ref);
-    // If not already logged in, open register page directly
     sessionStorage.setItem('dw_open_register','true');
   }
 })();
+
+// ── SHOW REFERRER BANNER ON REGISTER PAGE ──
+function applyReferrerBanner(){
+  const ref=sessionStorage.getItem('dw_pending_ref');
+  const banner=document.getElementById('referrer-banner');
+  const nameEl=document.getElementById('referrer-banner-name');
+  if(ref && banner && nameEl){
+    nameEl.textContent=ref;
+    banner.classList.add('show');
+  } else if(banner){
+    banner.classList.remove('show');
+  }
+}
 
 // ── AUTO-LOGOUT AFTER 1 HOUR INACTIVITY ──
 let inactivityTimer = null;
