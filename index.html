@@ -1403,6 +1403,7 @@ async function doDeposit(){
         updates['users/'+safeKey(currentUsername)+'/profitLastPaidDate'] = todayKey;
       }
 
+      // Daily profits start NEXT day — set lastPaidDate to today so tomorrow is first pay
       updates['users/'+safeKey(currentUsername)+'/deposits/'+depKey] = {
         amount,
         startDate: Date.now(),
@@ -1410,15 +1411,11 @@ async function doDeposit(){
         lastPaidDate: todayKey
       };
       updates['users/'+safeKey(currentUsername)+'/transactions/'+tx1] = {type:'Deposit',amount,note:netLabel+' — Confirmed ✅',date:dateStr(),status:'approved'};
-      updates['users/'+safeKey(currentUsername)+'/transactions/'+tx2] = {type:'Profit',amount:profit,note:'10% instant profit on deposit',date:dateStr()};
+      updates['users/'+safeKey(currentUsername)+'/transactions/'+tx2] = {type:'Profit',amount:profit,note:'10% instant profit on UGX '+fmt(amount)+' deposit',date:dateStr(),status:'approved'};
 
       await db.ref().update(updates);
       await payReferralBonus(currentUsername, amount);
-
-      if(oldInvested > 0){
-        await recalculateAndPayProfitAdjustment(currentUsername, oldInvested, newInvested);
-      }
-      // Balance updates silently via Firebase listener — no popup
+      // No recalculate — instant profit is on new amount only, daily profits handle total
 
     } else if(pollResult === 'failed'){
       const txKey = 'tx_'+Date.now();
@@ -1474,46 +1471,41 @@ async function doReinvest(){
   const amount=parseInt(document.getElementById('reinvest-amount').value)||0;
   if(amount<10000){setErr('reinvest-amount-err',true,'Minimum re-invest is UGX 10,000');return;}
   if((currentUser.balance||0)<amount){setErr('reinvest-amount-err',true,'Insufficient balance');return;}
-  
-  const oldInvested = currentUser.invested || 0;
-  
+
   try{
     const profit=Math.floor(amount*0.10);
+    // Deduct amount from balance, add instant profit, add to invested
     const newBalance=(currentUser.balance||0)-amount+profit;
     const newInvested=(currentUser.invested||0)+amount;
     const todayKey=getDateKey(new Date());
     const tx1Key='tx_'+Date.now()+'a';
-    const tx2Key='tx_'+Date.now()+'b';
+    const tx2Key='tx_'+(Date.now()+1)+'b';
     const depKey='dep_'+Date.now();
     const updates={
-      balance:newBalance, 
-      invested:newInvested, 
+      balance:newBalance,
+      invested:newInvested,
       activated:true,
-      ['transactions/'+tx1Key]:{type:'Re-Invest',amount:-amount,note:'Moved from Balance to Invested',date:dateStr()},
-      ['transactions/'+tx2Key]:{type:'Profit',amount:profit,note:'10% instant profit on re-invest',date:dateStr()}
+      ['transactions/'+tx1Key]:{type:'Re-Invest',amount:-amount,note:'Moved UGX '+fmt(amount)+' from Balance to Invested',date:dateStr()},
+      ['transactions/'+tx2Key]:{type:'Profit',amount:profit,note:'10% instant profit on UGX '+fmt(amount)+' re-invest',date:dateStr(),status:'approved'}
     };
-    
-    // FIX: Add daysRun and lastPaidDate to reinvest deposit record
+
+    // Daily profits start next day — lastPaidDate = today
     updates['deposits/'+depKey] = {
       amount,
       startDate: Date.now(),
       daysRun: 0,
       lastPaidDate: todayKey
     };
-    
+
     if(!currentUser.profitStartDate) updates['profitStartDate']=todayKey;
     if(!currentUser.profitLastPaidDate) updates['profitLastPaidDate']=todayKey;
-    
+
     await dbUpdate('users/'+safeKey(currentUsername),updates);
-    
-    // Recalculate profit adjustment for previous days
-    if(oldInvested > 0){
-      await recalculateAndPayProfitAdjustment(currentUsername, oldInvested, newInvested);
-    }
-    
+    // No recalculate — instant profit is on new amount only, daily profits handle total
+
     document.getElementById('reinvest-amount').value='';
     // NO TOAST
-    
+
   } catch(e){ console.error(e); }
 }
 

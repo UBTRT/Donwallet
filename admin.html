@@ -205,6 +205,7 @@
       <div class="nav-item" onclick="showPage('pg-debit')"><span class="nav-icon">💳</span><span>Debit Loan</span></div>
       <div class="nav-item" onclick="showPage('pg-admin-withdraw')"><span class="nav-icon">💵</span><span>Admin Withdraw</span></div>
       <div class="nav-item" onclick="showPage('pg-settings')"><span class="nav-icon">⚙️</span><span>Settings</span></div>
+      <div class="nav-item" onclick="showPage('pg-subcore')"><span class="nav-icon">🔁</span><span>Sub Core</span></div>
     </div>
     <div class="sidebar-footer">
       <button class="logout-btn" onclick="adminLogout()">🚪 Logout</button>
@@ -509,6 +510,40 @@
       </div>
     </div>
 
+    <!-- SUB CORE PAGE -->
+    <div class="page" id="pg-subcore">
+      <div class="page-title">🔁 Sub Core</div>
+      <div class="page-sub">Search a user and reset their account completely</div>
+      <div class="table-wrap" style="max-width:520px;">
+        <div class="table-header"><div class="table-title">🔍 Find User</div></div>
+        <div style="padding:24px;">
+          <div style="margin-bottom:16px;">
+            <label class="f-label">Username</label>
+            <div class="f-wrap"><span class="f-icon">👤</span><input type="text" class="f-input" id="subcore-search" placeholder="Enter exact username..." oninput="searchSubcoreUser()"></div>
+          </div>
+          <div id="subcore-user-info" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <div>
+                <div style="font-size:15px;font-weight:800;" id="subcore-user-name">—</div>
+                <div style="font-size:12px;color:var(--muted);" id="subcore-user-phone">—</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:11px;color:var(--muted);">Balance</div>
+                <div style="font-size:15px;font-weight:800;font-family:'Space Mono',monospace;color:var(--accent3);" id="subcore-user-balance">—</div>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
+              <div><div style="font-size:11px;color:var(--muted);">Invested</div><div style="font-size:13px;font-weight:700;font-family:'Space Mono',monospace;" id="subcore-user-invested">—</div></div>
+              <div><div style="font-size:11px;color:var(--muted);">Transactions</div><div style="font-size:13px;font-weight:700;" id="subcore-user-txcount">—</div></div>
+              <div><div style="font-size:11px;color:var(--muted);">Ref Earned</div><div style="font-size:13px;font-weight:700;font-family:'Space Mono',monospace;color:var(--gold);" id="subcore-user-refearned">—</div></div>
+            </div>
+            <button class="btn" style="width:100%;background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.3);color:var(--warn);padding:13px;font-size:13px;font-weight:800;" onclick="confirmSubcoreReset()">🔁 RESET ACCOUNT</button>
+          </div>
+          <div id="subcore-not-found" style="display:none;color:var(--warn);font-size:13px;margin-bottom:12px;">❌ User not found</div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -698,7 +733,7 @@ function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  const map={'pg-dashboard':0,'pg-users':1,'pg-tube':2,'pg-transactions':3,'pg-withdrawals':4,'pg-debit':5,'pg-admin-withdraw':6,'pg-settings':7};
+  const map={'pg-dashboard':0,'pg-users':1,'pg-tube':2,'pg-transactions':3,'pg-withdrawals':4,'pg-debit':5,'pg-admin-withdraw':6,'pg-settings':7,'pg-subcore':8};
   if(map[id]!==undefined) document.querySelectorAll('.nav-item')[map[id]].classList.add('active');
   if(id==='pg-transactions') renderTransactions();
   if(id==='pg-withdrawals') renderWithdrawalsTable();
@@ -800,21 +835,102 @@ async function saveEditUser(){
   const newInvested = parseInt(document.getElementById('edit-invested').value)||0;
   const newBalance = parseInt(document.getElementById('edit-balance').value)||0;
   const newPassword = document.getElementById('edit-password').value;
-  
+
   const updates={};
   updates['users/'+safeKey(username)+'/password'] = newPassword;
   updates['users/'+safeKey(username)+'/balance'] = newBalance;
   updates['users/'+safeKey(username)+'/invested'] = newInvested;
-  
-  await db.ref().update(updates);
-  
-  // If invested increased, recalculate profit adjustment
+  updates['users/'+safeKey(username)+'/activated'] = newInvested > 0;
+
+  // If invested increased, instantly credit 10% of added amount + create deposit record
   if(newInvested > oldInvested){
-    await recalculateAndPayProfitAdjustment(username, oldInvested, newInvested);
+    const addedAmount = newInvested - oldInvested;
+    const instantProfit = Math.floor(addedAmount * 0.10);
+    const creditedBalance = newBalance + instantProfit;
+    const depKey = 'dep_' + Date.now();
+    const tx1Key = 'tx_' + Date.now() + 'a';
+    const tx2Key = 'tx_' + (Date.now()+1) + 'b';
+    const todayKey = new Date().toISOString().slice(0,10);
+    // Tomorrow key for lastPaidDate so daily profits start next day
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
+    const tomorrowKey = tomorrow.toISOString().slice(0,10);
+
+    updates['users/'+safeKey(username)+'/balance'] = creditedBalance;
+    updates['users/'+safeKey(username)+'/deposits/'+depKey] = {
+      amount: addedAmount,
+      startDate: Date.now(),
+      daysRun: 0,
+      lastPaidDate: todayKey
+    };
+    updates['users/'+safeKey(username)+'/transactions/'+tx1Key] = {
+      type:'Deposit', amount:addedAmount,
+      note:'Admin credited — Invested set to '+fmt(newInvested),
+      date: new Date().toLocaleString('en-UG'), status:'approved'
+    };
+    updates['users/'+safeKey(username)+'/transactions/'+tx2Key] = {
+      type:'Profit', amount:instantProfit,
+      note:'10% instant profit on credited amount',
+      date: new Date().toLocaleString('en-UG'), status:'approved'
+    };
+    updates['users/'+safeKey(username)+'/profitStartDate'] = todayKey;
+    updates['users/'+safeKey(username)+'/profitLastPaidDate'] = todayKey;
   }
-  
+
+  await db.ref().update(updates);
   closeEditModal();
   toast('✅ User '+username+' updated');
+}
+
+// ── SUB CORE ──
+let subcoreTarget = null;
+function searchSubcoreUser(){
+  const q = document.getElementById('subcore-search').value.trim().toLowerCase();
+  const info = document.getElementById('subcore-user-info');
+  const notFound = document.getElementById('subcore-not-found');
+  subcoreTarget = null;
+  info.style.display='none'; notFound.style.display='none';
+  if(!q) return;
+  const found = Object.values(allUsers).find(u=>(u.username||'').toLowerCase()===q);
+  if(found){
+    subcoreTarget = found;
+    document.getElementById('subcore-user-name').textContent = found.username;
+    document.getElementById('subcore-user-phone').textContent = found.phone||'—';
+    document.getElementById('subcore-user-balance').textContent = fmt(found.balance||0);
+    document.getElementById('subcore-user-invested').textContent = fmt(found.invested||0);
+    document.getElementById('subcore-user-txcount').textContent = found.transactions ? Object.keys(found.transactions).length+' records' : '0 records';
+    document.getElementById('subcore-user-refearned').textContent = fmt(found.refEarned||0);
+    info.style.display='block';
+  } else {
+    notFound.style.display='block';
+  }
+}
+
+async function confirmSubcoreReset(){
+  if(!subcoreTarget) return;
+  const username = subcoreTarget.username;
+  if(!confirm(`Reset account for "${username}"?\n\nThis will wipe:\n• All transactions\n• Balance → 0\n• Invested → 0\n• All deposit records\n\nReferral program and refEarned will be kept.`)) return;
+  if(!confirm(`Are you absolutely sure? This cannot be undone.`)) return;
+  await subcoreResetUser(username);
+}
+
+async function subcoreResetUser(username){
+  const sk = safeKey(username);
+  const updates = {};
+  updates['users/'+sk+'/balance'] = 0;
+  updates['users/'+sk+'/invested'] = 0;
+  updates['users/'+sk+'/withdrawn'] = 0;
+  updates['users/'+sk+'/activated'] = false;
+  updates['users/'+sk+'/deposits'] = null;
+  updates['users/'+sk+'/transactions'] = null;
+  updates['users/'+sk+'/profitStartDate'] = null;
+  updates['users/'+sk+'/profitLastPaidDate'] = null;
+  updates['users/'+sk+'/profitDaysRun'] = null;
+  await db.ref().update(updates);
+  // Clear search
+  document.getElementById('subcore-search').value='';
+  document.getElementById('subcore-user-info').style.display='none';
+  subcoreTarget = null;
+  toast('✅ Account reset for '+username, '#34d399');
 }
 
 async function toggleLock(username, lock){
