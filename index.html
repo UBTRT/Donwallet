@@ -1613,7 +1613,7 @@ function applyReferrerBanner(){
 
 // ── AUTO-LOGOUT AFTER 1 HOUR INACTIVITY ──
 let inactivityTimer = null;
-const INACTIVITY_LIMIT = 60 * 60 * 1000; // 1 hour
+const INACTIVITY_LIMIT = 2 * 60 * 60 * 1000; // 2 hours
 function resetInactivityTimer(){
   if(!currentUser) return;
   if(inactivityTimer) clearTimeout(inactivityTimer);

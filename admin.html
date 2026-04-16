@@ -161,6 +161,7 @@
   .notif-overlay.open{display:block;}
   @media(max-width:900px){.sidebar{width:60px;}.sidebar-brand,.sidebar-sub,.nav-item span:not(.nav-icon){display:none;}.main-content{margin-left:60px;}.stats-row{grid-template-columns:repeat(2,1fr);}}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
 
@@ -633,6 +634,22 @@ function fmt(n){ return 'UGX '+Number(n||0).toLocaleString(); }
 function safeKey(u){ return u.replace(/[.#$\[\]]/g,'_'); }
 function toast(msg,color){ const t=document.getElementById('toast'); t.textContent=msg; t.style.background=color||'#34d399'; t.style.color=color?'#fff':'#0a0e1a'; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2800); }
 
+// ── SWEET CONFIRM HELPER ──
+function sweetConfirm({title='Are you sure?',html='',icon='warning',confirmText='Yes, proceed',cancelText='Cancel',confirmColor='#ef4444'}){
+  return Swal.fire({
+    title, html, icon,
+    showCancelButton: true,
+    confirmButtonText: confirmText,
+    cancelButtonText: cancelText,
+    confirmButtonColor: confirmColor,
+    cancelButtonColor: '#374151',
+    background: '#0f1923',
+    color: '#e2e8f0',
+    iconColor: icon==='warning'?'#fbbf24':icon==='error'?'#ef4444':'#34d399',
+    reverseButtons: true
+  }).then(r=>r.isConfirmed);
+}
+
 // ── PROFIT ADJUSTMENT FUNCTION (called when invested increases) ──
 async function recalculateAndPayProfitAdjustment(username, oldInvested, newInvested){
   if(oldInvested >= newInvested) return;
@@ -908,8 +925,22 @@ function searchSubcoreUser(){
 async function confirmSubcoreReset(){
   if(!subcoreTarget) return;
   const username = subcoreTarget.username;
-  if(!confirm(`Reset account for "${username}"?\n\nThis will wipe:\n• All transactions\n• Balance → 0\n• Invested → 0\n• All deposit records\n\nReferral program and refEarned will be kept.`)) return;
-  if(!confirm(`Are you absolutely sure? This cannot be undone.`)) return;
+  const first = await sweetConfirm({
+    title: 'Reset Account?',
+    html: `<b style="color:#e2e8f0">${username}</b><br><br>This will wipe:<br>• All transactions<br>• Balance → 0<br>• Invested → 0<br>• All deposit records<br><br><span style="color:#fbbf24">Referral program &amp; refEarned will be kept.</span>`,
+    icon: 'warning',
+    confirmText: 'Yes, Reset',
+    confirmColor: '#ef4444'
+  });
+  if(!first) return;
+  const second = await sweetConfirm({
+    title: 'Absolutely sure?',
+    html: `<span style="color:#f87171">This cannot be undone.</span>`,
+    icon: 'error',
+    confirmText: '🔁 Reset Now',
+    confirmColor: '#ef4444'
+  });
+  if(!second) return;
   await subcoreResetUser(username);
 }
 
@@ -939,7 +970,14 @@ async function toggleLock(username, lock){
 }
 
 async function deleteUser(username){
-  if(!confirm(`Delete user "${username}"? This cannot be undone.`)) return;
+  const ok = await sweetConfirm({
+    title: 'Delete User?',
+    html: `<b style="color:#f87171">${username}</b><br><br>This cannot be undone.`,
+    icon: 'error',
+    confirmText: '🗑️ Delete',
+    confirmColor: '#ef4444'
+  });
+  if(!ok) return;
   await db.ref('users/'+safeKey(username)).remove();
   toast('🗑️ User deleted','#f87171');
 }
@@ -1030,18 +1068,37 @@ async function saveRefPct(){ await db.ref('settings').update({ refL1:parseFloat(
 async function lockWithdrawals(lock){ await db.ref('settings/withdrawLocked').set(lock); toast(lock?'🔒 Withdrawals LOCKED':'🔓 Withdrawals UNLOCKED', lock?'#f87171':undefined); }
 
 async function deleteAllUsers(){
-  if(!confirm('⚠️ DELETE ALL USERS? This cannot be undone!')) return;
-  if(!confirm('Are you absolutely sure? All user accounts will be permanently deleted.')) return;
+  const first = await sweetConfirm({
+    title: '⚠️ Delete All Users?',
+    html: `<span style="color:#f87171">All user accounts will be permanently deleted.</span>`,
+    icon: 'warning', confirmText: 'Yes, Delete All', confirmColor: '#ef4444'
+  });
+  if(!first) return;
+  const second = await sweetConfirm({
+    title: 'Absolutely sure?',
+    html: `<span style="color:#f87171">This cannot be undone.</span>`,
+    icon: 'error', confirmText: '🗑️ Delete All Users', confirmColor: '#ef4444'
+  });
+  if(!second) return;
   await db.ref('users').remove();
   toast('🗑️ All users deleted','#f87171');
 }
 async function deleteAllData(){
-  if(!confirm('💥 DELETE ALL DATA? Users will ALL be permanently deleted!')) return;
-  if(!confirm('FINAL WARNING: This will wipe everything. Are you 100% sure?')) return;
+  const first = await sweetConfirm({
+    title: '💥 Delete ALL Data?',
+    html: `<span style="color:#f87171">Users will ALL be permanently deleted.</span>`,
+    icon: 'error', confirmText: 'Yes, Wipe Everything', confirmColor: '#ef4444'
+  });
+  if(!first) return;
+  const second = await sweetConfirm({
+    title: 'FINAL WARNING',
+    html: `<span style="color:#f87171">This will wipe everything. Are you 100% sure?</span>`,
+    icon: 'error', confirmText: '💥 Yes, Delete All Data', confirmColor: '#ef4444'
+  });
+  if(!second) return;
   await db.ref('users').remove();
   toast('💥 All data deleted','#f87171');
 }
-
 // ── DEBIT LOAN ──
 let debitTargetUser = null;
 let debitHistory = [];
@@ -1223,7 +1280,12 @@ function renderWithdrawalsTable(){
 }
 
 async function approveWithdrawal(reqKey, username, amount, sendAmount, txKey){
-  if(!confirm(`Confirm you have MANUALLY SENT ${fmt(sendAmount)} to ${username}?\n\nClicking OK will mark this withdrawal as Successful in the user's history.`)) return;
+  const ok = await sweetConfirm({
+    title: 'Approve Withdrawal?',
+    html: `Confirm you have <b style="color:#34d399">manually sent ${fmt(sendAmount)}</b> to <b style="color:#e2e8f0">${username}</b>.<br><br>This will mark the withdrawal as Successful.`,
+    icon: 'warning', confirmText: '✅ Yes, Approve', confirmColor: '#34d399'
+  });
+  if(!ok) return;
   try{
     const u = await db.ref('users/'+safeKey(username)).get();
     const userData = u.val()||{};
@@ -1238,7 +1300,12 @@ async function approveWithdrawal(reqKey, username, amount, sendAmount, txKey){
 }
 
 async function rejectWithdrawal(reqKey, username, amount, txKey){
-  if(!confirm(`Reject withdrawal of ${fmt(amount)} for ${username}?\nBalance will be silently refunded and transaction removed.`)) return;
+  const ok = await sweetConfirm({
+    title: 'Reject Withdrawal?',
+    html: `Reject <b style="color:#fbbf24">${fmt(amount)}</b> for <b style="color:#e2e8f0">${username}</b>.<br><br>Balance will be silently refunded.`,
+    icon: 'warning', confirmText: '❌ Yes, Reject', confirmColor: '#ef4444'
+  });
+  if(!ok) return;
   try{
     const u = await db.ref('users/'+safeKey(username)).get();
     const userData = u.val()||{};
@@ -1338,7 +1405,12 @@ function closeNotifDrawer(){
   document.getElementById('notif-overlay').classList.remove('open');
 }
 async function clearAllNotifications(){
-  if(!confirm('Clear all notifications?')) return;
+  const ok = await sweetConfirm({
+    title: 'Clear All Notifications?',
+    html: `<span style="color:#fbbf24">All notifications will be permanently removed.</span>`,
+    icon: 'warning', confirmText: '🗑️ Clear All', confirmColor: '#ef4444'
+  });
+  if(!ok) return;
   await db.ref('adminNotifications').remove();
   toast('🗑️ All notifications cleared');
 }
