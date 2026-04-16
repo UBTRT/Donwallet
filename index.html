@@ -907,8 +907,7 @@ async function marzCheckStatus(uuid){
 async function pollPaymentStatus(uuid, type, maxAttempts=36, intervalMs=5000){
   for(let i=0;i<maxAttempts;i++){
     await new Promise(r=>setTimeout(r, intervalMs));
-    const progress = Math.min(95, ((i+1)/maxAttempts)*100);
-    document.getElementById('pso-progress').style.width = progress+'%';
+
     try{
       const result = await marzCheckStatus(uuid);
       if(!result) continue;
