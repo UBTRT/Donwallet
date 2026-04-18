@@ -286,8 +286,8 @@
           <span id="tx-count" style="font-size:12px;color:var(--muted);"></span>
         </div>
         <table>
-          <thead><tr><th>Date</th><th>Username</th><th>Phone</th><th>Network</th><th>Amount</th><th>Reference</th><th>Status</th></tr></thead>
-          <tbody id="tx-table-body"><tr class="empty-row"><td colspan="7">Loading...</td></tr></tbody>
+          <thead><tr><th>Date</th><th>Username</th><th>Phone</th><th>Network</th><th>Amount</th><th>Reference</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="tx-table-body"><tr class="empty-row"><td colspan="8">Loading...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -1456,7 +1456,7 @@ function renderDepositsTable(){
   const deposits = Object.values(allDeposits).sort((a,b)=>b.timestamp-a.timestamp);
   
   if(!deposits.length){
-    tbody.innerHTML='<tr class="empty-row"><td colspan="7">No deposits yet</td></tr>';
+    tbody.innerHTML='<tr class="empty-row"><td colspan="8">No deposits yet</td></tr>';
     document.getElementById('tx-count').textContent='0 deposits';
     return;
   }
@@ -1486,6 +1486,7 @@ function renderDepositsTable(){
       <td class="mono" style="color:var(--gold);">${fmt(d.amount)}</td>
       <td class="mono" style="font-size:11px;color:var(--muted);">${d.reference.substring(0,12)}...</td>
       <td>${statusBadge}</td>
+      <td><button class="btn btn-delete" onclick="deleteDeposit('${d.reference}')">🗑️</button></td>
     </tr>`;
   }).join('');
 }
@@ -1495,6 +1496,19 @@ function filterTx(type){
   document.querySelectorAll('[id^="tf-"]').forEach(b=>b.classList.remove('btn-save'));
   document.getElementById('tf-'+type).classList.add('btn-save');
   renderDepositsTable();
+}
+
+async function deleteDeposit(reference){
+  const ok = confirm('Delete this deposit transaction? This cannot be undone.');
+  if(!ok) return;
+  
+  try{
+    await db.ref('deposits/'+reference).remove();
+    toast('🗑️ Deposit deleted');
+    renderDepositsTable();
+  } catch(e){
+    toast('❌ Error deleting deposit: '+e.message);
+  }
 }
 
 document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&document.getElementById('login-wrap').style.display!=='none')adminLogin(); });
