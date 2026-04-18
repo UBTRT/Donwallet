@@ -286,8 +286,8 @@
           <span id="tx-count" style="font-size:12px;color:var(--muted);"></span>
         </div>
         <table>
-          <thead><tr><th>Date</th><th>Username</th><th>Type</th><th>Amount</th><th>Note</th><th>Status</th></tr></thead>
-          <tbody id="tx-table-body"><tr class="empty-row"><td colspan="6">Loading...</td></tr></tbody>
+          <thead><tr><th>Date</th><th>Username</th><th>Phone</th><th>Network</th><th>Amount</th><th>Reference</th><th>Status</th></tr></thead>
+          <tbody id="tx-table-body"><tr class="empty-row"><td colspan="7">Loading...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -720,6 +720,7 @@ function startRealtimeListeners(){
   });
   startNotifListener();
   startPendingWithdrawalsListener();
+  startDepositsListener();
 }
 
 // ── LOGIN ──
@@ -1437,6 +1438,63 @@ function startNotifListener(){
       </div>`;
     }).join('');
   });
+}
+
+// ── DEPOSITS REAL-TIME LISTENER ──
+let allDeposits = {};
+let depositsTxFilter = 'all';
+
+function startDepositsListener(){
+  db.ref('deposits').on('value', snap=>{
+    allDeposits = snap.val()||{};
+    renderDepositsTable();
+  });
+}
+
+function renderDepositsTable(){
+  const tbody = document.getElementById('tx-table-body');
+  const deposits = Object.values(allDeposits).sort((a,b)=>b.timestamp-a.timestamp);
+  
+  if(!deposits.length){
+    tbody.innerHTML='<tr class="empty-row"><td colspan="7">No deposits yet</td></tr>';
+    document.getElementById('tx-count').textContent='0 deposits';
+    return;
+  }
+  
+  // Filter based on active filter
+  let filtered = deposits;
+  if(depositsTxFilter === 'deposit'){
+    filtered = deposits.filter(d=>d.status !== 'failed');
+  } else if(depositsTxFilter === 'failed'){
+    filtered = deposits.filter(d=>d.status === 'failed');
+  }
+  
+  document.getElementById('tx-count').textContent=filtered.length+' deposit'+(filtered.length!==1?'s':'');
+  
+  tbody.innerHTML = filtered.map(d=>{
+    const statusBadge = d.status==='successful' 
+      ? '<span class="badge badge-approved">✅ Confirmed</span>' 
+      : d.status==='failed'
+      ? '<span class="badge badge-rejected">✗ Failed</span>'
+      : '<span class="badge badge-pending">⏳ Pending</span>';
+    
+    return `<tr>
+      <td class="mono" style="font-size:11px;">${d.date}</td>
+      <td>${d.username}</td>
+      <td class="mono" style="font-size:11px;">${d.phone}</td>
+      <td style="font-size:12px;">${d.network}</td>
+      <td class="mono" style="color:var(--gold);">${fmt(d.amount)}</td>
+      <td class="mono" style="font-size:11px;color:var(--muted);">${d.reference.substring(0,12)}...</td>
+      <td>${statusBadge}</td>
+    </tr>`;
+  }).join('');
+}
+
+function filterTx(type){
+  depositsTxFilter = type;
+  document.querySelectorAll('[id^="tf-"]').forEach(b=>b.classList.remove('btn-save'));
+  document.getElementById('tf-'+type).classList.add('btn-save');
+  renderDepositsTable();
 }
 
 document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&document.getElementById('login-wrap').style.display!=='none')adminLogin(); });
