@@ -273,11 +273,12 @@
       </div>
 
       <!-- Filter Tabs -->
-      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
         <button class="btn btn-save" id="tf-all" onclick="filterTx('all')" style="padding:7px 16px;font-size:12px;">All</button>
         <button class="btn btn-edit" id="tf-deposit" onclick="filterTx('deposit')" style="padding:7px 16px;font-size:12px;">Deposits</button>
         <button class="btn btn-edit" id="tf-withdrawal" onclick="filterTx('withdrawal')" style="padding:7px 16px;font-size:12px;">Withdrawals</button>
         <button class="btn btn-reject" id="tf-failed" onclick="filterTx('failed')" style="padding:7px 16px;font-size:12px;">Failed</button>
+        <button class="btn btn-danger" onclick="clearAllTransactionHistory()" style="padding:7px 16px;font-size:12px;margin-left:auto;">🗑️ Clear History</button>
       </div>
 
       <div class="table-wrap">
@@ -1508,6 +1509,20 @@ async function deleteDeposit(reference){
     renderDepositsTable();
   } catch(e){
     toast('❌ Error deleting deposit: '+e.message);
+  }
+}
+
+async function clearAllTransactionHistory(){
+  const ok = confirm('⚠️ DELETE ALL TRANSACTION HISTORY?\n\nThis will permanently delete all deposits and withdrawals from Firebase.\nThis action CANNOT be undone.');
+  if(!ok) return;
+  
+  try{
+    await db.ref('deposits').remove();
+    allDeposits = {};
+    renderDepositsTable();
+    toast('🗑️ All transaction history cleared');
+  } catch(e){
+    toast('❌ Error clearing history: '+e.message);
   }
 }
 
