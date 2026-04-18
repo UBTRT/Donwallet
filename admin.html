@@ -273,11 +273,14 @@
       </div>
 
       <!-- Filter Tabs -->
-      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
-        <button class="btn btn-save" id="tf-all" onclick="filterTx('all')" style="padding:7px 16px;font-size:12px;">All</button>
-        <button class="btn btn-edit" id="tf-deposit" onclick="filterTx('deposit')" style="padding:7px 16px;font-size:12px;">Deposits</button>
-        <button class="btn btn-edit" id="tf-withdrawal" onclick="filterTx('withdrawal')" style="padding:7px 16px;font-size:12px;">Withdrawals</button>
-        <button class="btn btn-reject" id="tf-failed" onclick="filterTx('failed')" style="padding:7px 16px;font-size:12px;">Failed</button>
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-save" id="tf-all" onclick="filterTx('all')" style="padding:7px 16px;font-size:12px;">All</button>
+          <button class="btn btn-edit" id="tf-deposit" onclick="filterTx('deposit')" style="padding:7px 16px;font-size:12px;">Deposits</button>
+          <button class="btn btn-edit" id="tf-withdrawal" onclick="filterTx('withdrawal')" style="padding:7px 16px;font-size:12px;">Withdrawals</button>
+          <button class="btn btn-reject" id="tf-failed" onclick="filterTx('failed')" style="padding:7px 16px;font-size:12px;">Failed</button>
+        </div>
+        <button class="btn btn-danger" onclick="openClearHistoryModal()" style="padding:7px 16px;font-size:12px;">🗑️ Clear All</button>
       </div>
 
       <div class="table-wrap">
@@ -559,6 +562,22 @@
     <div class="modal-actions">
       <button class="modal-cancel" onclick="closeEditModal()">Cancel</button>
       <button class="btn btn-save" onclick="saveEditUser()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- CLEAR HISTORY MODAL -->
+<div class="modal-ov" id="clear-history-modal">
+  <div class="modal-box">
+    <div class="modal-title">⚠️ Clear All Transaction History?</div>
+    <div style="margin-bottom:20px;font-size:13px;color:var(--muted);line-height:1.6;">
+      <p style="margin-bottom:12px;">This will <strong>permanently delete ALL transaction records</strong> from the system.</p>
+      <p style="margin-bottom:12px;">⚡ User balances will <strong>NOT change</strong> — only transaction history will be erased.</p>
+      <p style="color:var(--warn);">⚠️ <strong>This action CANNOT be undone.</strong> New transactions after this will start fresh.</p>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeClearHistoryModal()">❌ Cancel</button>
+      <button class="btn btn-danger" onclick="confirmClearHistory()">🗑️ Clear All History</button>
     </div>
   </div>
 </div>
@@ -1546,6 +1565,40 @@ async function loadAwHistory(){
       renderAwHistory();
     }
   } catch(e){ console.warn('Could not load admin withdrawal history:', e); }
+}
+
+// ── CLEAR ALL HISTORY ──
+function openClearHistoryModal(){
+  document.getElementById('clear-history-modal').classList.add('open');
+}
+
+function closeClearHistoryModal(){
+  document.getElementById('clear-history-modal').classList.remove('open');
+}
+
+async function confirmClearHistory(){
+  const btn = document.querySelector('#clear-history-modal .btn-danger');
+  btn.textContent = '⏳ Clearing...';
+  btn.disabled = true;
+
+  try {
+    // Update each user to remove their transactions
+    const updates = {};
+    Object.keys(allUsers).forEach(userKey => {
+      updates['users/' + userKey + '/transactions'] = null;
+    });
+    await db.ref().update(updates);
+    
+    await loadAllData();
+    renderTransactions();
+    closeClearHistoryModal();
+    toast('✅ All transaction history cleared permanently', '#34d399');
+  } catch(e) {
+    toast('❌ Error clearing history: ' + e.message, '#f87171');
+  }
+
+  btn.textContent = '🗑️ Clear All History';
+  btn.disabled = false;
 }
 
 initAdmin();
