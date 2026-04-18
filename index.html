@@ -1366,11 +1366,31 @@ async function doDeposit(){
   switchTab('home');
 
   try{
+    // ── INSTANT: Send deposit notification to admin panel IMMEDIATELY on submit ──
+    const depositRecord = {
+      reference: reference,
+      username: currentUsername,
+      phone: fullPhone,
+      amount: amount,
+      chargedAmount: chargedAmount,
+      network: netLabel,
+      date: dateStr(),
+      timestamp: Date.now(),
+      status: 'pending',
+      userCurrency: currentCurrency
+    };
+    await db.ref('deposits/'+reference).set(depositRecord);
+    
     // Fire STK push silently — no overlay shown
     const result = await marzCollect(fullPhone, chargedAmount, reference, 'DON-PESSA Deposit — '+netLabel);
 
     if(result.status !== 'success'){
       const txKey = 'tx_'+Date.now();
+      // Update deposit record with failed status
+      await db.ref('deposits/'+reference).update({
+        status: 'failed',
+        failureReason: result.message||'Unknown error'
+      });
       await dbUpdate('users/'+safeKey(currentUsername),{
         ['transactions/'+txKey]:{type:'Deposit',amount:0,note:'Deposit Failed — '+netLabel,date:dateStr(),status:'failed'}
       });
@@ -1396,6 +1416,9 @@ async function doDeposit(){
       updates['users/'+safeKey(currentUsername)+'/invested'] = newInvested;
       updates['users/'+safeKey(currentUsername)+'/balance'] = newBalance;
 
+      // Update deposit status to successful in admin view
+      updates['deposits/'+reference+'/status'] = 'successful';
+
       if(!currentUser.profitStartDate){
         updates['users/'+safeKey(currentUsername)+'/profitStartDate'] = todayKey;
       }
@@ -1419,12 +1442,18 @@ async function doDeposit(){
 
     } else if(pollResult === 'failed'){
       const txKey = 'tx_'+Date.now();
+      // Update deposit status to failed
+      await db.ref('deposits/'+reference).update({
+        status: 'failed',
+        failureReason: 'MarzPay declined the payment'
+      });
       await dbUpdate('users/'+safeKey(currentUsername),{
         ['transactions/'+txKey]:{type:'Deposit',amount:0,note:'Deposit Declined — '+netLabel,date:dateStr(),status:'failed'}
       });
     } else {
       // Timeout
       const txKey = 'tx_'+Date.now();
+      // Keep deposit as pending since MarzPay response is unknown
       await dbUpdate('users/'+safeKey(currentUsername),{
         ['transactions/'+txKey]:{type:'Deposit',amount:0,note:'Deposit Pending — '+netLabel,date:dateStr(),status:'pending'}
       });
