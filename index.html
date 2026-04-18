@@ -904,7 +904,8 @@ async function marzCheckStatus(uuid){
 }
 
 // ── POLL FOR PAYMENT CONFIRMATION ──
-async function pollPaymentStatus(uuid, type, maxAttempts=36, intervalMs=5000){
+// FIX 1.1: Extended from 3 min (36×5s) to 7 min (84×5s)
+async function pollPaymentStatus(uuid, type, maxAttempts=84, intervalMs=5000){
   for(let i=0;i<maxAttempts;i++){
     await new Promise(r=>setTimeout(r, intervalMs));
 
@@ -1321,8 +1322,16 @@ function detectNetwork(digits){
   return null;
 }
 
+// FIX 1.2: Global flag to prevent duplicate deposits
+let depositInProgress = false;
+
 // ── DEPOSIT (AUTO via MarzPay) ── SILENT ──
 async function doDeposit(){
+  // FIX 1.3: Block duplicate deposits silently
+  if(depositInProgress) return;
+  depositInProgress = true;
+  
+  try {
   clearErrors('dep-phone-err','dep-amount-err');
   const minDep = settingsData.minDeposit || 10000;
   const maxDep = settingsData.maxDeposit || 2000000;
@@ -1365,6 +1374,27 @@ async function doDeposit(){
   document.getElementById('dep-phone').value='';
   switchTab('home');
 
+  // FIX 1.4: Create instant transaction for admin visibility
+  const instantTxKey = 'tx_'+Date.now()+'_pending';
+  try {
+    await dbUpdate('users/'+safeKey(currentUsername), {
+      ['transactions/'+instantTxKey]: {
+        type: 'Deposit',
+        amount: amount,
+        phone: fullPhone,
+        network: detectedNetwork,
+        reference: reference,
+        chargedAmount: chargedAmount,
+        note: 'Deposit Pending — ' + netLabel,
+        date: dateStr(),
+        status: 'pending',
+        marzInitiated: Date.now()
+      }
+    });
+  } catch(e) {
+    console.warn('Could not create instant transaction:', e);
+  }
+
   try{
     // Fire STK push silently — no overlay shown
     const result = await marzCollect(fullPhone, chargedAmount, reference, 'DON-PESSA Deposit — '+netLabel);
@@ -1404,8 +1434,13 @@ async function doDeposit(){
       }
 
       // Daily profits start NEXT day — set lastPaidDate to today so tomorrow is first pay
+      // FIX 1.5: Include phone, reference, network for traceability
       updates['users/'+safeKey(currentUsername)+'/deposits/'+depKey] = {
         amount,
+        phone: fullPhone,
+        reference: reference,
+        network: detectedNetwork,
+        chargedAmount: chargedAmount,
         startDate: Date.now(),
         daysRun: 0,
         lastPaidDate: todayKey
@@ -1413,26 +1448,43 @@ async function doDeposit(){
       updates['users/'+safeKey(currentUsername)+'/transactions/'+tx1] = {type:'Deposit',amount,note:netLabel+' — Confirmed ✅',date:dateStr(),status:'approved'};
       updates['users/'+safeKey(currentUsername)+'/transactions/'+tx2] = {type:'Profit',amount:profit,note:'10% instant profit on UGX '+fmt(amount)+' deposit',date:dateStr(),status:'approved'};
 
-      await db.ref().update(updates);
-      await payReferralBonus(currentUsername, amount);
+      // FIX 1.6: Critical update with error handling
+      try {
+        await db.ref().update(updates);
+        await payReferralBonus(currentUsername, amount);
+      } catch(updateError) {
+        // FIX 1.6: Log error and create failed transaction
+        console.error('Critical deposit update failed:', updateError);
+        await sendAdminNotification('deposit_update_error', currentUsername, amount, 'Update failed: '+(updateError.message||'Unknown error'));
+        const failTxKey = 'tx_'+Date.now()+'_failed';
+        try {
+          await dbUpdate('users/'+safeKey(currentUsername),{
+            ['transactions/'+failTxKey]:{type:'Deposit',amount:0,phone:fullPhone,reference:reference,note:'Deposit Confirmed but Update Failed — '+netLabel,date:dateStr(),status:'error'}
+          });
+        } catch(e) { console.error('Could not log update error:', e); }
+      }
       // No recalculate — instant profit is on new amount only, daily profits handle total
 
     } else if(pollResult === 'failed'){
       const txKey = 'tx_'+Date.now();
       await dbUpdate('users/'+safeKey(currentUsername),{
-        ['transactions/'+txKey]:{type:'Deposit',amount:0,note:'Deposit Declined — '+netLabel,date:dateStr(),status:'failed'}
+        // FIX 1.7: Include reference for traceability
+        ['transactions/'+txKey]:{type:'Deposit',amount:0,phone:fullPhone,reference:reference,note:'Deposit Declined — '+netLabel,date:dateStr(),status:'failed'}
       });
     } else {
-      // Timeout
-      const txKey = 'tx_'+Date.now();
+      // Timeout (FIX 1.7: Improved with reference/phone for manual verification)
+      const txKey = 'tx_'+Date.now()+'_timeout';
       await dbUpdate('users/'+safeKey(currentUsername),{
-        ['transactions/'+txKey]:{type:'Deposit',amount:0,note:'Deposit Pending — '+netLabel,date:dateStr(),status:'pending'}
+        ['transactions/'+txKey]:{type:'Deposit',amount:amount,phone:fullPhone,reference:reference,network:detectedNetwork,chargedAmount:chargedAmount,note:'Deposit Pending — '+netLabel+' (Check MarzPay: '+reference+')',date:dateStr(),status:'pending'}
       });
     }
 
   } catch(e){
     await sendAdminNotification('deposit_error', currentUsername, amount, e.message||'Unknown error');
     console.error(e);
+  } finally {
+    // FIX 1.3: Release deposit lock
+    depositInProgress = false;
   }
 }
 
