@@ -261,6 +261,10 @@
   /* PAYMENT STATUS OVERLAY */
 
 
+  /* UPDATING MESSAGE */
+  .updating-message{position:fixed;top:70px;left:50%;transform:translateX(-50%);color:#f87171;font-size:14px;font-weight:700;letter-spacing:1px;z-index:200;pointer-events:none;animation:updatePulse 2s ease-in-out infinite;}
+  @keyframes updatePulse{0%{opacity:0;transform:translateX(-50%) scale(0.95)}50%{opacity:1;transform:translateX(-50%) scale(1)}100%{opacity:0;transform:translateX(-50%) scale(0.95)}}
+
   /* HISTORY FILTER TABS */
   .tx-filter-tabs{display:flex;gap:6px;overflow-x:auto;padding:0 16px 12px;scrollbar-width:none;}
   .tx-filter-tabs::-webkit-scrollbar{display:none;}
@@ -391,6 +395,7 @@
 
 <!-- DASHBOARD -->
 <div class="dashboard-page" id="dashboard-page">
+  <div class="updating-message">🔄 Updating</div>
   <div class="topbar">
     <div class="brand"><div class="brand-icon">💎</div><span class="brand-name">DON-PESSA</span></div>
     <div class="topbar-right">

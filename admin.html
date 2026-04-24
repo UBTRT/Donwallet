@@ -91,6 +91,11 @@
   .settings-input{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-family:'Syne',sans-serif;font-size:13px;color:var(--text);outline:none;transition:.2s;flex:1;min-width:200px;}
   .settings-input:focus{border-color:var(--accent);}
   .settings-input.mono-input{font-family:'Space Mono',monospace;font-size:12px;}
+
+  /* UPDATING MESSAGE */
+  .updating-message{position:fixed;top:40px;left:50%;transform:translateX(-50%);color:#f87171;font-size:14px;font-weight:700;letter-spacing:1px;z-index:200;pointer-events:none;animation:updatePulse 2s ease-in-out infinite;}
+  @keyframes updatePulse{0%{opacity:0;transform:translateX(-50%) scale(0.95)}50%{opacity:1;transform:translateX(-50%) scale(1)}100%{opacity:0;transform:translateX(-50%) scale(0.95)}}
+
   .pct-group{display:flex;align-items:center;gap:8px;}
   .pct-input{width:80px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-family:'Space Mono',monospace;font-size:13px;color:var(--text);outline:none;transition:.2s;text-align:center;}
   .pct-input:focus{border-color:var(--accent);}
@@ -192,6 +197,7 @@
 
 <!-- ADMIN PANEL -->
 <div class="admin-wrap" id="admin-wrap">
+  <div class="updating-message">🔄 Updating</div>
   <div class="sidebar">
     <div class="sidebar-brand">
       <div class="sidebar-brand-name">DON-PESSA</div>
